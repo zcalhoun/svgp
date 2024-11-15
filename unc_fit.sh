@@ -2,7 +2,7 @@
 
 #SBATCH --job-name=unc_fit
 #SBATCH --output=unc_fit.out
-#SBATCH --error=unc_fitt.err
+#SBATCH --error=unc_fit.err
 #SBATCH --mail-user=zachary.calhoun@duke.edu
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH -p carlsonlab-gpu
@@ -18,5 +18,4 @@ python main.py \
     --k 1024 \
     --training_batch_size 256 \
     --checkpoint_path /cwork/zdc6/unc/k1024_tb256/model/ \
-    --output_path /cwork/zdc6/unc/k1024_tb256/ \
-    --smoke_test
+    --output_path /cwork/zdc6/unc/k1024_tb256/
