@@ -40,10 +40,22 @@ class UNC_Dataset:
         """
         X = self.train[["Minutes", "X", "Y"]].values
         y = self.train[self.y].values
+
+        # Normalize y to have mean 0 and standard deviation 1
+        y = (y - y.mean()) / y.std()
         return X, y
 
     def get_val(self):
-        return self.val[["Minutes", "X", "Y"]].values, self.val[self.y].values
+        """
+        Return the validation data, after normalizing the y values based
+        on the training data.
+        """
+        X, y = self.val[["Minutes", "X", "Y"]].values, self.val[self.y].values
+
+        y_train = self.train[self.y].values
+        y = (y - y_train.mean()) / y_train.std()
+
+        return X, y
 
     def _chunk_by_sensor(self, df, lower_num_sample, upper_bound_sample, replicates):
 

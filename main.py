@@ -72,8 +72,8 @@ def main(args):
     else:
         logging.info("CUDA is not available")
 
-    optim = torch.optim.Adam(model.parameters(), lr=0.1)
-    scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=5, gamma=0.1)
+    optim = torch.optim.Adam(model.parameters(), lr=args.lr)
+    scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=1, gamma=args.gamma)
     mll = gpytorch.mlls.VariationalELBO(likelihood, model, num_data=train_y.size(0))
 
     best_mse = float("inf")
@@ -115,9 +115,9 @@ def validate_output_path(output_path):
     """
     This function checks if the output path exists, and if not creates it.
     """
-    if not os.path.exists(args.output_path):
-        logging.info("Creating directory %s", args.output_path)
-        os.makedirs(args.output_path)
+    if not os.path.exists(output_path):
+        logging.info("Creating directory %s", output_path)
+        os.makedirs(output_path)
 
 
 def load_data(dataset, file_path):
@@ -169,8 +169,6 @@ def validate(model, likelihood, val_X, val_y):
             diff = diff.mean()  # average over likelihood_nsamples
             val_mse += diff
 
-    val_mse = val_mse / len(val_loader)
-
     return val_mse.item()
 
 
@@ -196,8 +194,8 @@ def train(model, likelihood, mll, optim, train_X, train_y):
     likelihood.train()
 
     num_batches = (
-        train_X.size(0) + model.training_batch_size - 1
-    ) // model.training_batch_size
+        train_X.size(0) + model.variational_strategy.training_batch_size - 1
+    ) // model.variational_strategy.training_batch_size
     logging.info("Training with %d batches", num_batches)
 
     mse_loss = 0
@@ -216,7 +214,7 @@ def train(model, likelihood, mll, optim, train_X, train_y):
             logging.info("Iter %d/%d - Loss: %f", i, num_batches, loss.item())
 
         mse_loss += (output.mean - y_batch).pow(2).sum().item()
-        count += y_batch.size(1)
+        count += y_batch.size(0)
 
     return mse_loss / count
 
@@ -301,8 +299,23 @@ if __name__ == "__main__":
     parser.add_argument(
         "--epochs",
         type=int,
-        default=40,
+        default=100,
         help="The number of epochs to train the model for.",
+    )
+
+    # Add learning rate, gamma, and other hyperparameters
+    parser.add_argument(
+        "--lr",
+        type=float,
+        default=0.1,
+        help="The learning rate to use when training the model.",
+    )
+
+    parser.add_argument(
+        "--gamma",
+        type=float,
+        default=0.9,
+        help="The gamma value to use when training the model.",
     )
 
     parser.add_argument(

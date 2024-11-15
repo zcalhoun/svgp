@@ -8,3 +8,5 @@
 */.vscode
 */.pytest_cache
 /archive/*
+*.log
+/experiments/*
