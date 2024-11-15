@@ -1,0 +1,9 @@
+/data/*
+/output/*
+/notebooks/*
+*/__pycache__/*
+/checkpoints/*
+.DS_Store
+*/.ipynb_checkpoints
+*/.vscode
+*/.pytest_cache
