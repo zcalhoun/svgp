@@ -134,10 +134,10 @@ def load_data(dataset, file_path):
     val_X, val_y = dataset.get_val()
 
     # Convert data to torch tensors and add to cuda if available
-    train_X = torch.from_numpy(train_X, dtype=torch.float32)
-    train_y = torch.from_numpy(train_y, dtype=torch.float32)
-    val_X = torch.from_numpy(val_X, dtype=torch.float32)
-    val_y = torch.from_numpy(val_y, dtype=torch.float32)
+    train_X = torch.from_numpy(train_X).float()
+    train_y = torch.from_numpy(train_y).float()
+    val_X = torch.from_numpy(val_X).float()
+    val_y = torch.from_numpy(val_y).float()
 
     # Use min/max normalization for the X values.
     x_max = train_X.max(dim=0)
