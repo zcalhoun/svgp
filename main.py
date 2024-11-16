@@ -67,6 +67,7 @@ def main(args):
     if torch.cuda.is_available():
         logging.info("Using CUDA")
         train_X, train_y = train_X.cuda(), train_y.cuda()
+        val_X, val_y = val_X.cuda(), val_y.cuda()
         likelihood = likelihood.cuda()
         model = model.cuda()
     else:
@@ -133,10 +134,10 @@ def load_data(dataset, file_path):
     val_X, val_y = dataset.get_val()
 
     # Convert data to torch tensors and add to cuda if available
-    train_X = torch.tensor(train_X, dtype=torch.float32)
-    train_y = torch.tensor(train_y, dtype=torch.float32)
-    val_X = torch.tensor(val_X, dtype=torch.float32)
-    val_y = torch.tensor(val_y, dtype=torch.float32)
+    train_X = torch.from_numpy(train_X, dtype=torch.float32)
+    train_y = torch.from_numpy(train_y, dtype=torch.float32)
+    val_X = torch.from_numpy(val_X, dtype=torch.float32)
+    val_y = torch.from_numpy(val_y, dtype=torch.float32)
 
     # Use min/max normalization for the X values.
     x_max = train_X.max(dim=0)
