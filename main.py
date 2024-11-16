@@ -65,14 +65,7 @@ def main(args):
 
     # If cuda is available, add to CUDA
     if torch.cuda.is_available():
-        logging.info("Using CUDA")
-        train_X, train_y = train_X.cuda(), train_y.cuda()
-        val_X, val_y = val_X.cuda(), val_y.cuda()
-
-        # Make train_X contiguous
-        train_X = train_X.contiguous()
-        val_X = val_X.contiguous()
-
+        logging.info("CUDA is available")
         likelihood = likelihood.cuda()
         model = model.cuda()
     else:
@@ -150,6 +143,12 @@ def load_data(dataset, file_path):
 
     train_X = 2 * (train_X - x_min.values) / (x_max.values - x_min.values) - 1
     val_X = 2 * (val_X - x_min.values) / (x_max.values - x_min.values) - 1
+
+    if torch.cuda.is_available():
+        train_X, train_y = train_X.cuda(), train_y.cuda()
+        val_X, val_y = val_X.cuda(), val_y.cuda()
+        train_X = train_X.contiguous()
+        val_X = val_X.contiguous()
 
     return train_X, train_y, val_X, val_y
 
