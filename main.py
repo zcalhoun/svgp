@@ -68,6 +68,11 @@ def main(args):
         logging.info("Using CUDA")
         train_X, train_y = train_X.cuda(), train_y.cuda()
         val_X, val_y = val_X.cuda(), val_y.cuda()
+
+        # Make train_X contiguous
+        train_X = train_X.contiguous()
+        val_X = val_X.contiguous()
+
         likelihood = likelihood.cuda()
         model = model.cuda()
     else:
