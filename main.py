@@ -43,6 +43,10 @@ def main(args):
         train_y = train_y[:1000]
         val_X = val_X[:100]
         val_y = val_y[:100]
+    # Check if train_X is contiguous
+    if not train_X.is_contiguous():
+        train_X = train_X.contiguous()
+        print("X is contiguous now")
 
     # Check the checkpoints directory to see if there is a base
     # model with the given k and batch_size already saved.
