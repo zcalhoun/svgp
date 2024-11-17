@@ -46,7 +46,6 @@ def main(args):
     # Check if train_X is contiguous
     if not train_X.is_contiguous():
         train_X = train_X.contiguous()
-        print("X is contiguous now")
 
     # Check the checkpoints directory to see if there is a base
     # model with the given k and batch_size already saved.
@@ -234,6 +233,7 @@ def set_up_logger(log_level, output_path):
     """
     logging.basicConfig(
         level=log_level,
+        filemode="w",
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         filename=os.path.join(output_path, "output.log"),
     )

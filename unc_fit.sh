@@ -18,4 +18,5 @@ python main.py \
     --k 512 \
     --training_batch_size 64 \
     --checkpoint_path /cwork/zdc6/unc/k512_tb64/model/ \
-    --output_path /cwork/zdc6/unc/k512_tb64/
+    --output_path /cwork/zdc6/unc/k512_tb64/ \
+    --lr 0.01
