@@ -15,8 +15,9 @@ conda activate gpytorch
 
 python main.py \
     --file_path /datacommons/carlsonlab/zdc6/unc_data/data.csv \
-    --k 512 \
-    --training_batch_size 64 \
-    --checkpoint_path /cwork/zdc6/unc/k512_tb64/model/ \
-    --output_path /cwork/zdc6/unc/k512_tb64/ \
-    --lr 0.01
+    --k 64 \
+    --training_batch_size 1024 \
+    --checkpoint_path /cwork/zdc6/unc/base_k64_tb1024/model/ \
+    --output_path /cwork/zdc6/unc/base_k64_tb1024/ \
+    --lr 0.1 \
+    --noise_constraint 0.01

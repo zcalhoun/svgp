@@ -1,3 +1,13 @@
+"""
+This file contains all of the models used in my experiments.
+
+Classes:
+    * VNNGP - the base model class.
+    * BaseVNNGP - a simple VNN-GP model with a Matern kernel.
+    * PeriodicSpatial_VNNGP - a VNN-GP model with a Matern kernel and a periodic spatial kernel.
+
+"""
+
 import torch
 import gpytorch
 from gpytorch.models import ApproximateGP
@@ -7,6 +17,8 @@ from gpytorch.variational.nearest_neighbor_variational_strategy import (
 
 
 class VNNGP(ApproximateGP):
+    """The base VNNGP model class."""
+
     def __init__(self, inducing_points, likelihood, k=256, training_batch_size=256):
         m, _ = inducing_points.shape
         self.m = m
@@ -38,22 +50,23 @@ class VNNGP(ApproximateGP):
         return self.variational_strategy(x=x, prior=False, **kwargs)
 
 
-class Spatial_VNNGP(VNNGP):
+class BaseVNNGP(VNNGP):
     """This class defines a simple VNN-GP model with a Matern kernel."""
 
     def __init__(self, inducing_points, likelihood, k=256, training_batch_size=256):
 
-        super(Spatial_VNNGP, self).__init__(
+        super(BaseVNNGP, self).__init__(
             inducing_points, likelihood, k=k, training_batch_size=training_batch_size
         )
 
         self.mean_module = gpytorch.means.ZeroMean()
 
-        self.covar_module = gpytorch.kernels.ScaleKernel(
-            gpytorch.kernels.MaternKernel(nu=0.5, active_dims=(0))
-        ) + gpytorch.kernels.ScaleKernel(
-            gpytorch.kernels.MaternKernel(nu=0.5, active_dims=(0))
-            * gpytorch.kernels.MaternKernel(nu=0.5, active_dims=(1, 2))
+        self.covar_module = (
+            gpytorch.kernels.ScaleKernel(
+                gpytorch.kernels.MaternKernel(nu=0.5, active_dims=0)
+                + gpytorch.kernels.PeriodicKernel(active_dims=0)
+            )
+            + gpytorch.kernels.ConstantKernel()
         )
 
         self.likelihood = likelihood

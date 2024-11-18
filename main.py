@@ -20,7 +20,7 @@ import torch
 from torch.utils.data import TensorDataset, DataLoader
 
 import Datasets
-from models import PeriodicSpatial_VNNGP, Spatial_VNNGP
+import models
 
 
 def main(args):
@@ -41,8 +41,8 @@ def main(args):
         # Only use a small subset of the training/validation data
         train_X = train_X[:10000]
         train_y = train_y[:10000]
-        val_X = val_X[:1000]
-        val_y = val_y[:1000]
+        val_X = val_X[:10000]
+        val_y = val_y[:10000]
     # Check if train_X is contiguous
     if not train_X.is_contiguous():
         train_X = train_X.contiguous()
@@ -61,12 +61,12 @@ def main(args):
     )
 
     logging.info("Creating model with k=%d", args.k)
-    model = Spatial_VNNGP(
-        inducing_points=train_X,
-        likelihood=likelihood,
+    model = models.load(
+        args.model,
+        train_X,
+        likelihood,
         k=args.k,
         training_batch_size=args.training_batch_size,
-        # period=period,
     )
 
     # If cuda is available, add to CUDA
@@ -81,7 +81,7 @@ def main(args):
     scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=1, gamma=args.gamma)
     mll = gpytorch.mlls.VariationalELBO(likelihood, model, num_data=train_y.size(0))
     best_mse = float("inf")
-    epochs = args.epochs if not args.smoke_test else 10
+    epochs = args.epochs
 
     # Initialize arrays to store train/val losses
     train_losses = []
@@ -100,7 +100,6 @@ def main(args):
             )
         else:
             logging.info("Validation loss increased. Stopping training.")
-            break
         scheduler.step()
         logging.info(
             "Epoch %d - Train Loss: %f - Val Loss: %f", epoch, train_loss, val_loss
@@ -163,23 +162,23 @@ def validate(model, likelihood, val_X, val_y):
     Run the validation loop and return the MSE loss.
     """
     val_dataset = TensorDataset(val_X.float(), val_y.float())
-    val_loader = DataLoader(val_dataset, batch_size=64, shuffle=False)
+    val_loader = DataLoader(val_dataset, batch_size=256, shuffle=False)
 
     model.eval()
     likelihood.eval()
     means = torch.tensor([0.0])
     val_mse = 0
+    count = 0
     with torch.no_grad():
         for x_batch, y_batch in val_loader:
             preds = model(x_batch)
             means = torch.cat([means, preds.mean.cpu()])
 
             diff = torch.pow(preds.mean - y_batch, 2)
-            diff = diff.sum(dim=-1) / val_X.size(0)  # sum over bsz and scaling
-            diff = diff.mean()  # average over likelihood_nsamples
-            val_mse += diff
+            val_mse += diff.sum()
+            count += y_batch.size(0)
 
-    return val_mse.item()
+    return val_mse.item() / count
 
 
 def train(model, likelihood, mll, optim, train_X, train_y):
@@ -263,6 +262,13 @@ if __name__ == "__main__":
         type=str,
         default="chunk_by_sensor",
         help="The method to use to split the data.",
+    )
+
+    parser.add_argument(
+        "--model",
+        type=str,
+        default="BaseVNNGP",
+        help="The model to use.",
     )
 
     parser.add_argument(
