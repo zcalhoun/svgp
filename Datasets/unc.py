@@ -22,6 +22,8 @@ class UNC_Dataset:
         upper_bound_sample=500,
         random_seed=42,
         y="Temperature",
+        periodic_features=False,
+        period=1440,
     ):
         df = pd.read_csv(file_path)
         self.y = y
@@ -34,18 +36,36 @@ class UNC_Dataset:
         else:
             raise ValueError("The sampling method must be one of 'chunk_by_sensor'.")
 
-        self.period = 1440  # minutes in a day
+        self.period = period  # minutes in a day
+        self.periodic_features = periodic_features
 
     def get_train(self):
         """
         Set up the covariates to be minutes, latitude, and longitude.
         """
         X = self.train[["Minutes", "X", "Y"]].values
+
+        # If periodic features
+        if self.periodic_features:
+            X = self._periodize(X)
+
         y = self.train[self.y].values
 
         # Normalize y to have mean 0 and standard deviation 1
         y = (y - y.mean()) / y.std()
         return X, y
+
+    def _periodize(self, X):
+        sin_term = self._add_sin_term(X[:, 0])
+        cos_term = self._add_cos_term(X[:, 0])
+        X = np.column_stack((X, sin_term, cos_term))
+        return X
+
+    def _add_sin_term(self, X):
+        return np.sin(2 * np.pi * X / self.period)
+
+    def _add_cos_term(self, X):
+        return np.cos(2 * np.pi * X / self.period)
 
     def get_val(self):
         """
@@ -53,6 +73,10 @@ class UNC_Dataset:
         on the training data.
         """
         X, y = self.val[["Minutes", "X", "Y"]].values, self.val[self.y].values
+
+        # If periodic features
+        if self.periodic_features:
+            X = self._periodize(X)
 
         y_train = self.train[self.y].values
         y = (y - y_train.mean()) / y_train.std()

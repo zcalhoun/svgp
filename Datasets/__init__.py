@@ -8,5 +8,8 @@ def load(dataset, file_path):
     """
     if dataset == "UNC":
         return UNC_Dataset(file_path)
+
+    if dataset == "UNC_periodic":
+        return UNC_Dataset(file_path, periodic_features=True)
     else:
         raise ValueError("The dataset must be one of 'UNC'.")

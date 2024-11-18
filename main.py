@@ -98,8 +98,6 @@ def main(args):
             torch.save(
                 model.state_dict(), os.path.join(args.checkpoint_path, "model.pth")
             )
-        else:
-            logging.info("Validation loss increased. Stopping training.")
         scheduler.step()
         logging.info(
             "Epoch %d - Train Loss: %f - Val Loss: %f", epoch, train_loss, val_loss
