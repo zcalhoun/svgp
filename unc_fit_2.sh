@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=unc_fit
+#SBATCH --job-name=unc_fit_2
 #SBATCH --output=unc_fit_2.out
 #SBATCH --error=unc_fit_2.err
 #SBATCH --mail-user=zachary.calhoun@duke.edu

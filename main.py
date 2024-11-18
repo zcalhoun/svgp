@@ -35,7 +35,7 @@ def main(args):
 
     logging.info(args)
 
-    train_X, train_y, val_X, val_y = load_data(args.dataset, args.file_path)
+    train_X, train_y, val_X, val_y, period = load_data(args.dataset, args.file_path)
 
     if args.smoke_test:
         # Only use a small subset of the training/validation data
@@ -64,6 +64,7 @@ def main(args):
         likelihood=likelihood,
         k=args.k,
         training_batch_size=args.training_batch_size,
+        period=period,
     )
 
     # If cuda is available, add to CUDA
@@ -147,13 +148,16 @@ def load_data(dataset, file_path):
     train_X = 2 * (train_X - x_min.values) / (x_max.values - x_min.values) - 1
     val_X = 2 * (val_X - x_min.values) / (x_max.values - x_min.values) - 1
 
+    period = 2 * dataset.period / (x_max.values[0] - x_min.values[0])
+
+    print(period)
     if torch.cuda.is_available():
         train_X, train_y = train_X.cuda(), train_y.cuda()
         val_X, val_y = val_X.cuda(), val_y.cuda()
         train_X = train_X.contiguous()
         val_X = val_X.contiguous()
 
-    return train_X, train_y, val_X, val_y
+    return train_X, train_y, val_X, val_y, period
 
 
 def validate(model, likelihood, val_X, val_y):

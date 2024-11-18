@@ -34,6 +34,8 @@ class UNC_Dataset:
         else:
             raise ValueError("The sampling method must be one of 'chunk_by_sensor'.")
 
+        self.period = 1440  # minutes in a day
+
     def get_train(self):
         """
         Set up the covariates to be minutes, latitude, and longitude.
