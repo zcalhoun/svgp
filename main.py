@@ -20,7 +20,9 @@ import torch
 from torch.utils.data import TensorDataset, DataLoader
 
 import Datasets
-from models import PeriodicSpatial_VNNGP
+from models import PeriodicSpatial_VNNGP, Spatial_VNNGP
+
+import pdb
 
 
 def main(args):
@@ -39,10 +41,10 @@ def main(args):
 
     if args.smoke_test:
         # Only use a small subset of the training/validation data
-        train_X = train_X[:1000]
-        train_y = train_y[:1000]
-        val_X = val_X[:100]
-        val_y = val_y[:100]
+        train_X = train_X[:10000]
+        train_y = train_y[:10000]
+        val_X = val_X[:1000]
+        val_y = val_y[:1000]
     # Check if train_X is contiguous
     if not train_X.is_contiguous():
         train_X = train_X.contiguous()
@@ -56,15 +58,17 @@ def main(args):
         os.makedirs(args.checkpoint_path)
 
     # Create the likelihood and model
-    likelihood = gpytorch.likelihoods.GaussianLikelihood()
+    likelihood = gpytorch.likelihoods.GaussianLikelihood(
+        noise_constraint=gpytorch.constraints.GreaterThan(args.noise_constraint)
+    )
 
     logging.info("Creating model with k=%d", args.k)
-    model = PeriodicSpatial_VNNGP(
+    model = Spatial_VNNGP(
         inducing_points=train_X,
         likelihood=likelihood,
         k=args.k,
         training_batch_size=args.training_batch_size,
-        period=period,
+        # period=period,
     )
 
     # If cuda is available, add to CUDA
@@ -78,18 +82,15 @@ def main(args):
     optim = torch.optim.Adam(model.parameters(), lr=args.lr)
     scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=1, gamma=args.gamma)
     mll = gpytorch.mlls.VariationalELBO(likelihood, model, num_data=train_y.size(0))
-
     best_mse = float("inf")
-    epochs = args.epochs if not args.smoke_test else 2
+    epochs = args.epochs if not args.smoke_test else 10
 
     # Initialize arrays to store train/val losses
     train_losses = []
     val_losses = []
     for epoch in range(epochs):
         logging.info("Epoch %d", epoch)
-        logging.info("\tTraining")
         train_loss = train(model, likelihood, mll, optim, train_X, train_y)
-        logging.info("\tValidation")
         val_loss = validate(model, likelihood, val_X, val_y)
 
         train_losses.append(train_loss)
@@ -150,7 +151,6 @@ def load_data(dataset, file_path):
 
     period = 2 * dataset.period / (x_max.values[0] - x_min.values[0])
 
-    print(period)
     if torch.cuda.is_available():
         train_X, train_y = train_X.cuda(), train_y.cuda()
         val_X, val_y = val_X.cuda(), val_y.cuda()
@@ -329,6 +329,13 @@ if __name__ == "__main__":
         type=float,
         default=0.9,
         help="The gamma value to use when training the model.",
+    )
+
+    parser.add_argument(
+        "--noise_constraint",
+        type=float,
+        default=1e-6,
+        help="The noise constraint to use when training the model.",
     )
 
     parser.add_argument(
