@@ -19,4 +19,4 @@ python main.py \
     --training_batch_size 128 \
     --checkpoint_path /cwork/zdc6/unc/k256_tb128/model/ \
     --output_path /cwork/zdc6/unc/k256_tb128/ \
-    --lr 0.001
+    --lr 0.0001
