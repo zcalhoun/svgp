@@ -78,7 +78,9 @@ def main(args):
         logging.info("CUDA is not available")
 
     optim = torch.optim.Adam(model.parameters(), lr=args.lr)
-    scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=1, gamma=args.gamma)
+    scheduler = torch.optim.lr_scheduler.CyclicLR(
+        optim, base_lr=args.lr / 100, max_lr=args.lr, step_size_up=args.epochs // 2
+    )
     mll = gpytorch.mlls.VariationalELBO(likelihood, model, num_data=train_y.size(0))
     best_mse = float("inf")
     epochs = args.epochs
@@ -86,6 +88,7 @@ def main(args):
     # Initialize arrays to store train/val losses
     train_losses = []
     val_losses = []
+    learning_rates = []
     for epoch in range(epochs):
         logging.info("Epoch %d", epoch)
         train_loss = train(model, likelihood, mll, optim, train_X, train_y)
@@ -93,6 +96,7 @@ def main(args):
 
         train_losses.append(train_loss)
         val_losses.append(val_loss)
+        learning_rates.append(scheduler.get_last_lr()[0])
         if val_loss < best_mse:
             best_mse = val_loss
             torch.save(
@@ -104,7 +108,9 @@ def main(args):
         )
 
     # Create a dataframe from the train/val losses
-    losses = pd.DataFrame({"train_loss": train_losses, "val_loss": val_losses})
+    losses = pd.DataFrame(
+        {"train_loss": train_losses, "val_loss": val_losses, "lr": learning_rates}
+    )
 
     # Save the losses to a csv file
     losses.to_csv(os.path.join(args.output_path, "losses.csv"))

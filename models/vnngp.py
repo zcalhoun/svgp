@@ -81,7 +81,7 @@ class BaseVNNGP_PeriodicFeatures(VNNGP):
             inducing_points, likelihood, k=k, training_batch_size=training_batch_size
         )
 
-        self.mean_module = gpytorch.means.ZeroMean()
+        self.mean_module = gpytorch.means.ConstantMean()
 
         self.covar_module = (
             gpytorch.kernels.ScaleKernel(
