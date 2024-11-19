@@ -147,10 +147,10 @@ def load_data(dataset, file_path):
     x_max = train_X.max(dim=0)
     x_min = train_X.min(dim=0)
 
-    train_X = 1000 * (train_X - x_min.values) / (x_max.values - x_min.values) - 1
-    val_X = 1000 * (val_X - x_min.values) / (x_max.values - x_min.values) - 1
+    train_X = 2 * (train_X - x_min.values) / (x_max.values - x_min.values) - 1
+    val_X = 2 * (val_X - x_min.values) / (x_max.values - x_min.values) - 1
 
-    period = 1000 * dataset.period / (x_max.values[0] - x_min.values[0])
+    period = 2 * dataset.period / (x_max.values[0] - x_min.values[0])
 
     if torch.cuda.is_available():
         train_X, train_y = train_X.cuda(), train_y.cuda()
