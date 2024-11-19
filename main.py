@@ -79,7 +79,7 @@ def main(args):
 
     optim = torch.optim.Adam(model.parameters(), lr=args.lr)
     scheduler = torch.optim.lr_scheduler.CyclicLR(
-        optim, base_lr=args.lr / 100, max_lr=args.lr, step_size_up=args.epochs // 2
+        optim, base_lr=args.lr / 1000, max_lr=args.lr, step_size_up=args.epochs // 2
     )
     mll = gpytorch.mlls.VariationalELBO(likelihood, model, num_data=train_y.size(0))
     best_mse = float("inf")
