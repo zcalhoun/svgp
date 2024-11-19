@@ -47,6 +47,10 @@ def main(args):
     if not train_X.is_contiguous():
         train_X = train_X.contiguous()
 
+    if args.time_multiplier is not None:
+        train_X[:, 0] *= args.time_multiplier
+        val_X[:, 0] *= args.time_multiplier
+
     # Check the checkpoints directory to see if there is a base
     # model with the given k and batch_size already saved.
     # If there is, load the model and continue training.
@@ -350,6 +354,12 @@ if __name__ == "__main__":
         "--smoke_test",
         action="store_true",
         help="Run a smoke test to make sure the code runs.",
+    )
+
+    parser.add_argument(
+        "--time_multiplier",
+        type=float,
+        help="The multiplier to use for the time variable.",
     )
 
     args = parser.parse_args()

@@ -20,7 +20,8 @@ python main.py \
     --checkpoint_path /cwork/zdc6/unc/k256_tb64_periodic_features/model/ \
     --output_path /cwork/zdc6/unc/k256_tb64_periodic_features/ \
     --dataset UNC_periodic \
-    --lr 0.0001 \
+    --lr 0.001 \
     --epochs 100 \
-    --noise_constraint 0.1 \
+    --noise_constraint 0.01 \
     --model BaseVNNGP_PeriodicFeatures \
+    --time_multiplier 100.0
