@@ -78,9 +78,9 @@ def main(args):
         logging.info("CUDA is not available")
 
     optim = torch.optim.Adam(model.parameters(), lr=args.lr)
-    scheduler = torch.optim.lr_scheduler.CyclicLR(
-        optim, base_lr=args.lr / 1000, max_lr=args.lr, step_size_up=args.epochs // 2
-    )
+    # scheduler = torch.optim.lr_scheduler.CyclicLR(
+    #     optim, base_lr=args.lr / 1000, max_lr=args.lr, step_size_up=args.epochs // 2
+    # )
     mll = gpytorch.mlls.VariationalELBO(likelihood, model, num_data=train_y.size(0))
     best_mse = float("inf")
     epochs = args.epochs
@@ -96,13 +96,13 @@ def main(args):
 
         train_losses.append(train_loss)
         val_losses.append(val_loss)
-        learning_rates.append(scheduler.get_last_lr()[0])
+        learning_rates.append(args.lr)
         if val_loss < best_mse:
             best_mse = val_loss
             torch.save(
                 model.state_dict(), os.path.join(args.checkpoint_path, "model.pth")
             )
-        scheduler.step()
+        # scheduler.step()
         logging.info(
             "Epoch %d - Train Loss: %f - Val Loss: %f", epoch, train_loss, val_loss
         )
