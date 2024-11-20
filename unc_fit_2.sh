@@ -15,12 +15,12 @@ conda activate gpytorch
 
 python main.py \
     --file_path /datacommons/carlsonlab/zdc6/unc_data/data.csv \
-    --k 256 \
+    --k 512 \
     --training_batch_size 64 \
-    --checkpoint_path /cwork/zdc6/unc/k256_tb64_periodic_features/model/ \
-    --output_path /cwork/zdc6/unc/k256_tb64_periodic_features/ \
+    --checkpoint_path /cwork/zdc6/unc/k512_tb64_periodic_features/model/ \
+    --output_path /cwork/zdc6/unc/k512_tb64_periodic_features/ \
     --dataset UNC_periodic \
-    --lr 0.001 \
+    --lr 0.00001 \
     --epochs 100 \
     --noise_constraint 0.01 \
     --model BaseVNNGP_PeriodicFeatures \
