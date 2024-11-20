@@ -99,7 +99,9 @@ def main(args):
 
         train_losses.append(train_loss)
         val_losses.append(val_loss)
-        learning_rates.append(args.lr)
+        # get last learning rate
+        lr = scheduler.get_last_lr()
+        learning_rates.append(lr)
         if val_loss < best_mse:
             best_mse = val_loss
             torch.save(

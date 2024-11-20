@@ -24,6 +24,7 @@ class UNC_Dataset:
         y="Temperature",
         periodic_features=False,
         period=1440,
+        spatial_features=True,
     ):
         df = pd.read_csv(file_path)
         self.y = y
@@ -38,12 +39,16 @@ class UNC_Dataset:
 
         self.period = period  # minutes in a day
         self.periodic_features = periodic_features
+        self.spatial_features = spatial_features
 
     def get_train(self):
         """
         Set up the covariates to be minutes, latitude, and longitude.
         """
-        X = self.train[["Minutes", "X", "Y"]].values
+        if self.spatial_features:
+            X = self.train[["Minutes", "X", "Y"]].values
+        else:
+            X = self.train[["Minutes"]].values
 
         # If periodic features
         if self.periodic_features:
@@ -72,7 +77,14 @@ class UNC_Dataset:
         Return the validation data, after normalizing the y values based
         on the training data.
         """
-        X, y = self.val[["Minutes", "X", "Y"]].values, self.val[self.y].values
+
+        if self.spatial_features:
+            X = self.val[["Minutes", "X", "Y"]].values
+        else:
+            X = self.val[["Minutes"]].values
+
+        y = self.val[self.y].values
+        # X, y = self.val[["Minutes", "X", "Y"]].values, self.val[self.y].values
 
         # If periodic features
         if self.periodic_features:

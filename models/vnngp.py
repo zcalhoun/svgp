@@ -122,7 +122,7 @@ class BaseVNNGP_PeriodicFeatures_time(VNNGP):
                 gpytorch.kernels.MaternKernel(nu=0.5, active_dims=0)
             )
             + gpytorch.kernels.ScaleKernel(
-                gpytorch.kernels.MaternKernel(nu=0.5, active_dims=(3, 4))
+                gpytorch.kernels.MaternKernel(nu=0.5, active_dims=(1, 2))
             )
         ) + gpytorch.kernels.ConstantKernel()
 
