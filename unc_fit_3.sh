@@ -16,7 +16,7 @@ conda activate gpytorch
 python main.py \
     --file_path /datacommons/carlsonlab/zdc6/unc_data/data.csv \
     --k 1024 \
-    --training_batch_size 32 \
+    --training_batch_size 16 \
     --checkpoint_path /cwork/zdc6/unc/k512_tb64_periodic_features_2/model/ \
     --output_path /cwork/zdc6/unc/k512_tb64_periodic_features_2/ \
     --dataset UNC_periodic \
