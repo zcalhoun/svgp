@@ -20,7 +20,7 @@ python main.py \
     --checkpoint_path /cwork/zdc6/unc/k1024_4/model/ \
     --output_path /cwork/zdc6/unc/k1024_4/ \
     --dataset UNC_periodic_time \
-    --lr 0.001 \
+    --lr 0.0001 \
     --epochs 100 \
     --noise_constraint 0.01 \
     --model BaseVNNGP_PeriodicFeatures_time \

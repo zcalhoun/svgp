@@ -11,6 +11,7 @@ Args:
 """
 
 import os
+import sys
 import argparse
 import logging
 import pandas as pd
@@ -31,7 +32,7 @@ def main(args):
     # Check if the output path exists, if not create it
     validate_output_path(args.output_path)
 
-    set_up_logger(args.log_level, args.output_path)
+    set_up_logger(args.log_level)
 
     logging.info(args)
 
@@ -119,6 +120,8 @@ def main(args):
 
     # Save the losses to a csv file
     losses.to_csv(os.path.join(args.output_path, "losses.csv"))
+
+    logging.shutdown()
 
 
 def validate_output_path(output_path):
@@ -237,7 +240,7 @@ def train(model, likelihood, mll, optim, train_X, train_y):
     return mse_loss / count
 
 
-def set_up_logger(log_level, output_path):
+def set_up_logger(log_level):
     """
     Set up the logger to log to a file.
     """
@@ -245,8 +248,10 @@ def set_up_logger(log_level, output_path):
         level=log_level,
         filemode="w",
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        filename=os.path.join(output_path, "output.log"),
+        stream=sys.stdout,
     )
+
+    logging.captureWarnings(True)
 
 
 if __name__ == "__main__":
