@@ -106,6 +106,29 @@ class BaseVNNGP_PeriodicFeatures(VNNGP):
         self.likelihood = likelihood
 
 
+class BaseVNNGP_PeriodicFeatures_time(VNNGP):
+    """This class only focuses on the time dimensions."""
+
+    def __init__(self, inducing_points, likelihood, k=256, training_batch_size=256):
+
+        super(BaseVNNGP_PeriodicFeatures_time, self).__init__(
+            inducing_points, likelihood, k=k, training_batch_size=training_batch_size
+        )
+
+        self.mean_module = gpytorch.means.ConstantMean()
+
+        self.covar_module = (
+            gpytorch.kernels.ScaleKernel(
+                gpytorch.kernels.MaternKernel(nu=0.5, active_dims=0)
+            )
+            + gpytorch.kernels.ScaleKernel(
+                gpytorch.kernels.MaternKernel(nu=0.5, active_dims=(3, 4))
+            )
+        ) + gpytorch.kernels.ConstantKernel()
+
+        self.likelihood = likelihood
+
+
 class PeriodicSpatial_VNNGP(VNNGP):
     """This class defines the model for the VNN-GP, where the kernel is defined
     with a temporal dimension as well as a periodic spatial dimension."""

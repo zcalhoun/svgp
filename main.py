@@ -5,7 +5,7 @@ Args:
     dataset: The dataset to fit the model to.
     sampling_method: The method to use to split the data.
     k: The number of neighbors to use in the nearest neighbor strategy.
-    training_batch_size: The batch size to use when training the model.
+    batch_size: The batch size to use when training the model.
     checkpoint_path: The path to save the model to.
     output_path: The path to save the log files to.
 """
@@ -70,7 +70,7 @@ def main(args):
         train_X,
         likelihood,
         k=args.k,
-        training_batch_size=args.training_batch_size,
+        training_batch_size=args.batch_size,
     )
 
     # If cuda is available, add to CUDA
@@ -82,9 +82,8 @@ def main(args):
         logging.info("CUDA is not available")
 
     optim = torch.optim.Adam(model.parameters(), lr=args.lr)
-    # scheduler = torch.optim.lr_scheduler.CyclicLR(
-    #     optim, base_lr=args.lr / 1000, max_lr=args.lr, step_size_up=args.epochs // 2
-    # )
+
+    scheduler = torch.optim.lr_scheduler.ConstantLR(optim, factor=0.01, total_iters=1)
     mll = gpytorch.mlls.VariationalELBO(likelihood, model, num_data=train_y.size(0))
     best_mse = float("inf")
     epochs = args.epochs
@@ -96,7 +95,7 @@ def main(args):
     for epoch in range(epochs):
         logging.info("Epoch %d", epoch)
         train_loss = train(model, likelihood, mll, optim, train_X, train_y)
-        val_loss = validate(model, likelihood, val_X, val_y)
+        val_loss = validate(model, likelihood, val_X, val_y, args.batch_size)
 
         train_losses.append(train_loss)
         val_losses.append(val_loss)
@@ -106,7 +105,7 @@ def main(args):
             torch.save(
                 model.state_dict(), os.path.join(args.checkpoint_path, "model.pth")
             )
-        # scheduler.step()
+        scheduler.step()
         logging.info(
             "Epoch %d - Train Loss: %f - Val Loss: %f", epoch, train_loss, val_loss
         )
@@ -165,12 +164,12 @@ def load_data(dataset, file_path):
     return train_X, train_y, val_X, val_y, period
 
 
-def validate(model, likelihood, val_X, val_y):
+def validate(model, likelihood, val_X, val_y, batch_size):
     """
     Run the validation loop and return the MSE loss.
     """
     val_dataset = TensorDataset(val_X.float(), val_y.float())
-    val_loader = DataLoader(val_dataset, batch_size=256, shuffle=False)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
     model.eval()
     likelihood.eval()
@@ -294,7 +293,7 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--training_batch_size",
+        "--batch_size",
         type=int,
         default=256,
         help="The batch size to use when training the model.",
