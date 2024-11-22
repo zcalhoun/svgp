@@ -35,7 +35,7 @@ def main(args):
     set_up_logger(args.log_level)
 
     logging.info(args)
-
+    sys.stdout.flush()
     train_X, train_y, val_X, val_y, period = load_data(args.dataset, args.file_path)
 
     if args.smoke_test:
@@ -66,6 +66,7 @@ def main(args):
     )
 
     logging.info("Creating model with k=%d", args.k)
+    sys.stdout.flush()
     model = models.load(
         args.model,
         train_X,
@@ -73,7 +74,7 @@ def main(args):
         k=args.k,
         training_batch_size=args.batch_size,
     )
-
+    sys.stdout.flush()
     # If cuda is available, add to CUDA
     if torch.cuda.is_available():
         logging.info("CUDA is available")
@@ -112,6 +113,8 @@ def main(args):
         logging.info(
             "Epoch %d - Train Loss: %f - Val Loss: %f", epoch, train_loss, val_loss
         )
+        # Flush the logs to the file.
+        sys.stdout.flush()
 
     # Create a dataframe from the train/val losses
     losses = pd.DataFrame(
