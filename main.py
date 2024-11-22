@@ -12,9 +12,9 @@ Args:
 
 import os
 import sys
+import csv
 import argparse
 import logging
-import pandas as pd
 
 import gpytorch
 import torch
@@ -24,21 +24,23 @@ import Datasets
 import models
 
 
-def main(args):
+def main(arguments):
     """
     The main function which loads the data, the model, and runs the train/validation
     loop. The arguments are passed in from the command line.
     """
     # Check if the output path exists, if not create it
-    validate_output_path(args.output_path)
+    validate_output_path(arguments.output_path)
 
-    set_up_logger(args.log_level)
+    set_up_logger(arguments.log_level)
 
-    logging.info(args)
+    logging.info(arguments)
     sys.stdout.flush()
-    train_X, train_y, val_X, val_y, period = load_data(args.dataset, args.file_path)
+    train_X, train_y, val_X, val_y, _ = load_data(
+        arguments.dataset, arguments.file_path
+    )
 
-    if args.smoke_test:
+    if arguments.smoke_test:
         # Only use a small subset of the training/validation data
         train_X = train_X[:10000]
         train_y = train_y[:10000]
@@ -48,31 +50,31 @@ def main(args):
     if not train_X.is_contiguous():
         train_X = train_X.contiguous()
 
-    if args.time_multiplier is not None:
-        train_X[:, 0] *= args.time_multiplier
-        val_X[:, 0] *= args.time_multiplier
+    if arguments.time_multiplier is not None:
+        train_X[:, 0] *= arguments.time_multiplier
+        val_X[:, 0] *= arguments.time_multiplier
 
     # Check the checkpoints directory to see if there is a base
     # model with the given k and batch_size already saved.
     # If there is, load the model and continue training.
 
-    if not os.path.exists(args.checkpoint_path):
-        logging.info("Creating directory %s", args.checkpoint_path)
-        os.makedirs(args.checkpoint_path)
+    if not os.path.exists(arguments.checkpoint_path):
+        logging.info("Creating directory %s", arguments.checkpoint_path)
+        os.makedirs(arguments.checkpoint_path)
 
     # Create the likelihood and model
     likelihood = gpytorch.likelihoods.GaussianLikelihood(
-        noise_constraint=gpytorch.constraints.GreaterThan(args.noise_constraint)
+        noise_constraint=gpytorch.constraints.GreaterThan(arguments.noise_constraint)
     )
 
-    logging.info("Creating model with k=%d", args.k)
+    logging.info("Creating model with k=%d", arguments.k)
     sys.stdout.flush()
     model = models.load(
-        args.model,
+        arguments.model,
         train_X,
         likelihood,
-        k=args.k,
-        training_batch_size=args.batch_size,
+        k=arguments.k,
+        training_batch_size=arguments.batch_size,
     )
     sys.stdout.flush()
     # If cuda is available, add to CUDA
@@ -83,31 +85,24 @@ def main(args):
     else:
         logging.info("CUDA is not available")
 
-    optim = torch.optim.Adam(model.parameters(), lr=args.lr)
+    optim = torch.optim.Adam(model.parameters(), lr=arguments.lr)
 
     scheduler = torch.optim.lr_scheduler.ConstantLR(optim, factor=0.01, total_iters=1)
     mll = gpytorch.mlls.VariationalELBO(likelihood, model, num_data=train_y.size(0))
     best_mse = float("inf")
-    epochs = args.epochs
 
-    # Initialize arrays to store train/val losses
-    train_losses = []
-    val_losses = []
-    learning_rates = []
-    for epoch in range(epochs):
+    # Write the model to the file using csv
+    initialize_csv(arguments.output_path)
+
+    for epoch in range(arguments.epochs):
         logging.info("Epoch %d", epoch)
         train_loss = train(model, likelihood, mll, optim, train_X, train_y)
-        val_loss = validate(model, likelihood, val_X, val_y, args.batch_size)
+        val_loss = validate(model, likelihood, val_X, val_y, arguments.batch_size)
 
-        train_losses.append(train_loss)
-        val_losses.append(val_loss)
-        # get last learning rate
-        lr = scheduler.get_last_lr()
-        learning_rates.append(lr)
         if val_loss < best_mse:
             best_mse = val_loss
             torch.save(
-                model.state_dict(), os.path.join(args.checkpoint_path, "model.pth")
+                model.state_dict(), os.path.join(arguments.checkpoint_path, "model.pth")
             )
         scheduler.step()
         logging.info(
@@ -115,16 +110,37 @@ def main(args):
         )
         # Flush the logs to the file.
         sys.stdout.flush()
-
-    # Create a dataframe from the train/val losses
-    losses = pd.DataFrame(
-        {"train_loss": train_losses, "val_loss": val_losses, "lr": learning_rates}
-    )
-
-    # Save the losses to a csv file
-    losses.to_csv(os.path.join(args.output_path, "losses.csv"))
+        update_csv(
+            arguments.output_path,
+            [
+                epoch,
+                train_loss,
+                val_loss,
+                scheduler.get_last_lr()[0],
+                likelihood.noise.item(),
+            ],
+        )
 
     logging.shutdown()
+
+
+def initialize_csv(output_path):
+    """
+    This function initializes the csv file to write the model to.
+    """
+    headers = ["epoch", "train_loss", "val_loss", "lr", "noise"]
+    with open(os.path.join(output_path, "model.csv"), "w", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(headers)
+
+
+def update_csv(output_path, row):
+    """
+    This function updates the csv file with the given row.
+    """
+    with open(os.path.join(output_path, "model.csv"), "a", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(row)
 
 
 def validate_output_path(output_path):

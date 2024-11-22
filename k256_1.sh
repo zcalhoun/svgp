@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#SBATCH --job-name=k128_2
-#SBATCH --output=k128_2.out
-#SBATCH --error=k128_2.err
+#SBATCH --job-name=k256_1
+#SBATCH --output=k256_1.out
+#SBATCH --error=k256_1.err
 #SBATCH --mail-user=zachary.calhoun@duke.edu
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH -p carlsonlab-gpu
@@ -17,10 +17,10 @@ export PYTHONUNBUFFERED=1
 
 python -u main.py \
     --file_path /datacommons/carlsonlab/zdc6/unc_data/data.csv \
-    --k 128 \
+    --k 256 \
     --batch_size 256 \
-    --checkpoint_path /cwork/zdc6/unc/k128_2/model/ \
-    --output_path /cwork/zdc6/unc/k128_2/ \
+    --checkpoint_path /cwork/zdc6/unc/k256_1/model/ \
+    --output_path /cwork/zdc6/unc/k256_1/ \
     --dataset UNC_periodic \
     --lr 0.01 \
     --epochs 200 \
