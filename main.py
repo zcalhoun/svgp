@@ -104,7 +104,6 @@ def main(arguments):
             torch.save(
                 model.state_dict(), os.path.join(arguments.checkpoint_path, "model.pth")
             )
-        scheduler.step()
         logging.info(
             "Epoch %d - Train Loss: %f - Val Loss: %f", epoch, train_loss, val_loss
         )
@@ -120,6 +119,7 @@ def main(arguments):
                 likelihood.noise.item(),
             ],
         )
+        scheduler.step()
 
     logging.shutdown()
 

@@ -16,7 +16,7 @@ conda activate gpytorch
 export PYTHONUNBUFFERED=1
 
 python -u main.py \
-    --file_path /datacommons/carlsonlab/zdc6/unc_data/data.csv \
+    --file_path /cwork/zdc6/unc/data/data.csv \
     --k 256 \
     --batch_size 256 \
     --checkpoint_path /cwork/zdc6/unc/k256_1/model/ \
