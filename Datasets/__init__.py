@@ -15,4 +15,7 @@ def load(dataset, file_path):
     if dataset == "UNC_periodic_time":
         return UNC_Dataset(file_path, periodic_features=True, spatial_features=False)
 
+    if dataset == "UNC_periodic_covariates":
+        return UNC_Dataset(file_path, periodic_features=True, covariates=True)
+
     raise ValueError("The dataset must be one of 'UNC'.")

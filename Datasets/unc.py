@@ -25,8 +25,12 @@ class UNC_Dataset:
         periodic_features=False,
         period=1440,
         spatial_features=True,
+        covariates=False,
     ):
         df = pd.read_csv(file_path)
+
+        if covariates:
+            self._encode_covariates(df)
         self.y = y
         # Initialize the random seed
         np.random.seed(random_seed)
@@ -40,6 +44,13 @@ class UNC_Dataset:
         self.period = period  # minutes in a day
         self.periodic_features = periodic_features
         self.spatial_features = spatial_features
+        self.covariates = covariates
+
+    def _encode_covariates(self, df):
+        df["Shade_Type"] = df["Shade_Type"].map({"shaded": 0, "non-shaded": 1})
+        df["Landcover_Type"] = df["Landcover_Type"].map(
+            {"vegetation": 0, "impervious": 1}
+        )
 
     def get_train(self):
         """
@@ -53,6 +64,11 @@ class UNC_Dataset:
         # If periodic features
         if self.periodic_features:
             X = self._periodize(X)
+
+        if self.covariates:
+            X = np.column_stack(
+                (X, self.train[["Shade_Type", "Landcover_Type"]].values)
+            )
 
         y = self.train[self.y].values
 
@@ -89,6 +105,9 @@ class UNC_Dataset:
         # If periodic features
         if self.periodic_features:
             X = self._periodize(X)
+
+        if self.covariates:
+            X = np.column_stack((X, self.val[["Shade_Type", "Landcover_Type"]].values))
 
         y_train = self.train[self.y].values
         y = (y - y_train.mean()) / y_train.std()
