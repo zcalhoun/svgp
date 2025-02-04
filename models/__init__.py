@@ -6,6 +6,7 @@ from .vnngp import (
     PeriodicSpatial_VNNGP,
     BaseVNNGP,
     BaseVNNGP_PeriodicFeatures,
+    BaseVNNGP_PeriodicFeatures_Covariates,
     BaseVNNGP_PeriodicFeatures_time,
 )
 
@@ -20,5 +21,7 @@ def load(model_name, *args, **kwargs):
         return BaseVNNGP_PeriodicFeatures(*args, **kwargs)
     if model_name == "BaseVNNGP_PeriodicFeatures_time":
         return BaseVNNGP_PeriodicFeatures_time(*args, **kwargs)
+    if model_name == "BaseVNNGP_PeriodicFeatures_Covariates":
+        return BaseVNNGP_PeriodicFeatures_Covariates(*args, **kwargs)
 
     raise ValueError(f"Model {model_name} not found")
