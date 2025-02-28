@@ -19,7 +19,14 @@ from gpytorch.variational.nearest_neighbor_variational_strategy import (
 class VNNGP(ApproximateGP):
     """The base VNNGP model class."""
 
-    def __init__(self, inducing_points, likelihood, k=256, training_batch_size=256):
+    def __init__(
+        self,
+        inducing_points,
+        likelihood,
+        k=256,
+        training_batch_size=256,
+        inducing_point_prior=None,
+    ):
         m, _ = inducing_points.shape
         self.m = m
         self.k = k
@@ -27,6 +34,11 @@ class VNNGP(ApproximateGP):
         variational_distribution = (
             gpytorch.variational.MeanFieldVariationalDistribution(m)
         )
+
+        if inducing_point_prior is not None:
+            variational_distribution.initialize_variational_distribution(
+                inducing_point_prior
+            )
 
         variational_strategy = NNVariationalStrategy(
             self,
@@ -75,10 +87,21 @@ class BaseVNNGP(VNNGP):
 class BaseVNNGP_PeriodicFeatures(VNNGP):
     """This class defines a simple VNN-GP model with a Matern kernel."""
 
-    def __init__(self, inducing_points, likelihood, k=256, training_batch_size=256):
+    def __init__(
+        self,
+        inducing_points,
+        likelihood,
+        k=256,
+        training_batch_size=256,
+        inducing_point_prior=None,
+    ):
 
         super(BaseVNNGP_PeriodicFeatures, self).__init__(
-            inducing_points, likelihood, k=k, training_batch_size=training_batch_size
+            inducing_points,
+            likelihood,
+            k=k,
+            training_batch_size=training_batch_size,
+            inducing_point_prior=inducing_point_prior,
         )
 
         self.mean_module = gpytorch.means.ConstantMean()
@@ -101,7 +124,7 @@ class BaseVNNGP_PeriodicFeatures(VNNGP):
                 gpytorch.kernels.MaternKernel(nu=0.5, active_dims=(1, 2), ard=2)
                 * gpytorch.kernels.MaternKernel(nu=1.5, active_dims=0)
             )
-        ) + gpytorch.kernels.ConstantKernel()
+        )
 
         self.likelihood = likelihood
 
