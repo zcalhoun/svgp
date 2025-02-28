@@ -109,6 +109,9 @@ def run_experiment(args, C):
     X_val[:, 0] *= C
     X_test[:, 0] *= C
 
+    if torch.cuda.is_available():
+        X_train = X_train.cuda()
+        y_train = y_train.cuda()
     if not X_train.is_contiguous():
         X_train = X_train.contiguous()
 
@@ -233,6 +236,9 @@ def validate(model, likelihood, val_X, val_y, batch_size):
     count = 0
     with torch.no_grad():
         for x_batch, y_batch in val_loader:
+            if torch.cuda.is_available():
+                x_batch = x_batch.cuda()
+                y_batch = y_batch.cuda()
             preds = model(x_batch)
             means = torch.cat([means, preds.mean.cpu()])
 
