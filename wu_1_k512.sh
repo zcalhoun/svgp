@@ -14,7 +14,6 @@ source ~/.bashrc
 conda activate gpytorch
 
 python wu_1.py \
-    --smoke_test \
     --file_path /work/zdc6/spat_temp/data/july2023.csv \
     --output_path /work/zdc6/spat_temp/exp1/k512 \
     --epochs 100 \
