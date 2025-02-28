@@ -111,7 +111,7 @@ def run_experiment(args, C):
 
     if torch.cuda.is_available():
         X_train = X_train.cuda()
-        y_train = y_train.cuda()
+        # y_train = y_train.cuda()
     if not X_train.is_contiguous():
         X_train = X_train.contiguous()
 
@@ -129,7 +129,6 @@ def run_experiment(args, C):
     model = models.load(
         "BaseVNNGP_PeriodicFeatures",
         X_train,
-        likelihood,
         k=args.num_neighbors,
         training_batch_size=args.batch_size,
         inducing_point_prior=inducing_point_prior,
@@ -145,14 +144,25 @@ def run_experiment(args, C):
     model.covar_module.kernels[1].outputscale = 15
     model.covar_module.kernels[2].outputscale = 1
     model.covar_module.kernels[3].outputscale = 1
-    model.likelihood.noise = 1
+    likelihood.noise = 1
 
     # If cuda is available, add to CUDA
     if torch.cuda.is_available():
         model = model.cuda()
         likelihood = likelihood.cuda()
 
-    optim = torch.optim.Adam(model.parameters(), lr=args.lr)
+    optim = torch.optim.Adam(
+        [
+            {
+                "params": model.parameters(),
+                "lr": args.lr,
+            },
+            {
+                "params": likelihood.parameters(),
+                "lr": args.lr,
+            },
+        ]
+    )
     mll = gpytorch.mlls.VariationalELBO(likelihood, model, y_train.numel())
 
     best_mse = float("inf")

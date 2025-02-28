@@ -8,7 +8,6 @@ Classes:
 
 """
 
-import torch
 import gpytorch
 from gpytorch.models import ApproximateGP
 from gpytorch.variational.nearest_neighbor_variational_strategy import (
@@ -22,7 +21,6 @@ class VNNGP(ApproximateGP):
     def __init__(
         self,
         inducing_points,
-        likelihood,
         k=256,
         training_batch_size=256,
         inducing_point_prior=None,
@@ -65,10 +63,10 @@ class VNNGP(ApproximateGP):
 class BaseVNNGP(VNNGP):
     """This class defines a simple VNN-GP model with a Matern kernel."""
 
-    def __init__(self, inducing_points, likelihood, k=256, training_batch_size=256):
+    def __init__(self, inducing_points, k=256, training_batch_size=256):
 
         super(BaseVNNGP, self).__init__(
-            inducing_points, likelihood, k=k, training_batch_size=training_batch_size
+            inducing_points, k=k, training_batch_size=training_batch_size
         )
 
         self.mean_module = gpytorch.means.ZeroMean()
@@ -81,8 +79,6 @@ class BaseVNNGP(VNNGP):
             + gpytorch.kernels.ConstantKernel()
         )
 
-        self.likelihood = likelihood
-
 
 class BaseVNNGP_PeriodicFeatures(VNNGP):
     """This class defines a simple VNN-GP model with a Matern kernel."""
@@ -90,7 +86,6 @@ class BaseVNNGP_PeriodicFeatures(VNNGP):
     def __init__(
         self,
         inducing_points,
-        likelihood,
         k=256,
         training_batch_size=256,
         inducing_point_prior=None,
@@ -98,7 +93,6 @@ class BaseVNNGP_PeriodicFeatures(VNNGP):
 
         super(BaseVNNGP_PeriodicFeatures, self).__init__(
             inducing_points,
-            likelihood,
             k=k,
             training_batch_size=training_batch_size,
             inducing_point_prior=inducing_point_prior,
@@ -126,16 +120,14 @@ class BaseVNNGP_PeriodicFeatures(VNNGP):
             )
         )
 
-        self.likelihood = likelihood
-
 
 class BaseVNNGP_PeriodicFeatures_Covariates(VNNGP):
     """This class defines a simple VNN-GP model with a Matern kernel."""
 
-    def __init__(self, inducing_points, likelihood, k=256, training_batch_size=256):
+    def __init__(self, inducing_points, k=256, training_batch_size=256):
 
         super(BaseVNNGP_PeriodicFeatures_Covariates, self).__init__(
-            inducing_points, likelihood, k=k, training_batch_size=training_batch_size
+            inducing_points, k=k, training_batch_size=training_batch_size
         )
 
         self.mean_module = gpytorch.means.ConstantMean()
@@ -164,16 +156,14 @@ class BaseVNNGP_PeriodicFeatures_Covariates(VNNGP):
             )
         ) + gpytorch.kernels.ConstantKernel()
 
-        self.likelihood = likelihood
-
 
 class BaseVNNGP_PeriodicFeatures_time(VNNGP):
     """This class only focuses on the time dimensions."""
 
-    def __init__(self, inducing_points, likelihood, k=256, training_batch_size=256):
+    def __init__(self, inducing_points, k=256, training_batch_size=256):
 
         super(BaseVNNGP_PeriodicFeatures_time, self).__init__(
-            inducing_points, likelihood, k=k, training_batch_size=training_batch_size
+            inducing_points, k=k, training_batch_size=training_batch_size
         )
 
         self.mean_module = gpytorch.means.ConstantMean()
@@ -187,19 +177,15 @@ class BaseVNNGP_PeriodicFeatures_time(VNNGP):
             )
         ) + gpytorch.kernels.ConstantKernel()
 
-        self.likelihood = likelihood
-
 
 class PeriodicSpatial_VNNGP(VNNGP):
     """This class defines the model for the VNN-GP, where the kernel is defined
     with a temporal dimension as well as a periodic spatial dimension."""
 
-    def __init__(
-        self, inducing_points, likelihood, k=256, training_batch_size=256, period=1.0
-    ):
+    def __init__(self, inducing_points, k=256, training_batch_size=256, period=1.0):
 
         super(PeriodicSpatial_VNNGP, self).__init__(
-            inducing_points, likelihood, k=k, training_batch_size=training_batch_size
+            inducing_points, k=k, training_batch_size=training_batch_size
         )
 
         self.mean_module = gpytorch.means.ZeroMean()
@@ -226,5 +212,3 @@ class PeriodicSpatial_VNNGP(VNNGP):
         self.covar_module.kernels[0].base_kernel.kernels[1].period_length = period
         self.covar_module.kernels[1].base_kernel.kernels[1].period_length = period
         self.covar_module.kernels[1].base_kernel.kernels[1].length_scale = 0.01
-
-        self.likelihood = likelihood

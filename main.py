@@ -85,7 +85,9 @@ def main(arguments):
     else:
         logging.info("CUDA is not available")
 
-    optim = torch.optim.Adam(model.parameters(), lr=arguments.lr)
+    optim = torch.optim.Adam(
+        [model.parameters(), likelihood.parameters()], lr=arguments.lr
+    )
 
     scheduler = torch.optim.lr_scheduler.ConstantLR(optim, factor=0.01, total_iters=1)
     mll = gpytorch.mlls.VariationalELBO(likelihood, model, num_data=train_y.size(0))
