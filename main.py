@@ -242,13 +242,14 @@ def train(model, likelihood, mll, optim, train_X, train_y):
 
     mse_loss = 0
     count = 0
+    train_y = train_y.cuda() if torch.cuda.is_available() else train_y
     for i in range(num_batches):
         optim.zero_grad()
         output = model(x=None)
         current_training_indices = model.variational_strategy.current_training_indices
         y_batch = train_y[..., current_training_indices]
-        if torch.cuda.is_available():
-            y_batch = y_batch.cuda()
+        # if torch.cuda.is_available():
+        #     y_batch = y_batch.cuda()
         loss = -mll(output, y_batch)
         loss.backward()
         optim.step()
