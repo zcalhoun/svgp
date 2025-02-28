@@ -16,7 +16,6 @@ conda activate gpytorch
 python wu_1.py \
     --smoke_test \
     --file_path /work/zdc6/spat_temp/data/july2023.csv \
-    --output_path /work/zdc6/spat_temp/exp1 \
-    --log_level DEBUG \
-    --epochs 10 \
+    --output_path /work/zdc6/spat_temp/exp1/k64 \
+    --epochs 100 \
     --num_neighbors 64 \
