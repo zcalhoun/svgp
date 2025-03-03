@@ -167,6 +167,7 @@ def run_experiment(args, C):
 
     best_mse = float("inf")
 
+    patience_counter = 0
     for epoch in range(args.epochs):
         logging.info("Starting epoch %d", epoch)
 
@@ -181,9 +182,12 @@ def run_experiment(args, C):
 
         if val_loss < best_mse:
             best_mse = val_loss
+            patience_counter = 0
         else:
-            logging.info("Early stopping.")
-            break
+            patience_counter += 1
+            if patience_counter >= args.patience:
+                logging.info("Patience reached.")
+                break
 
     test_loss = validate(model, likelihood, X_test, y_test, args.batch_size)
 
@@ -370,6 +374,13 @@ if __name__ == "__main__":
         type=float,
         default=4.0,
         help="The variance to use for the inducing point prior.",
+    )
+
+    parser.add_argument(
+        "--patience",
+        type=int,
+        default=5,
+        help="The number of epochs to wait before early stopping.",
     )
 
     arguments = parser.parse_args()

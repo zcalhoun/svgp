@@ -15,6 +15,6 @@ conda activate gpytorch
 
 python wu_1.py \
     --file_path /work/zdc6/spat_temp/data/july2023.csv \
-    --output_path /work/zdc6/spat_temp/exp1/k64 \
+    --output_path /work/zdc6/spat_temp/exp1/k64_2 \
     --epochs 100 \
     --num_neighbors 64 \
