@@ -1,0 +1,13 @@
+#!/bin/bash
+
+#SBATCH --job-name=era2020
+#SBATCH --output=era2020.out
+#SBATCH --error=era2020.err
+#SBATCH --mail-user=zachary.calhoun@duke.edu
+#SBATCH --mail-type=BEGIN,END,FAIL
+#SBATCH --mem=32G
+
+source ~/.bashrc
+conda activate geo
+
+python pull_era_data.py --year 2020
