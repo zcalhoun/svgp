@@ -15,7 +15,7 @@ def main(args):
     Iterate through the years/months and make the request.
     """
 
-    year = str(args.year)
+    year = args.year
 
     months = [f"{month:02d}" for month in range(1, 13)]
 
@@ -40,7 +40,7 @@ def make_request(year, month, days):
             "10m_u_component_of_wind",
             "10m_v_component_of_wind",
         ],
-        "year": year,
+        "year": str(year),
         "month": month,
         "day": days,
         "time": [
