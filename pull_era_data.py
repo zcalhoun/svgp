@@ -7,8 +7,6 @@ import argparse
 from calendar import monthrange
 import cdsapi
 
-DEST_DIR = "/work/zdc6/era5/"
-
 
 def main(args):
     """
@@ -75,9 +73,10 @@ def make_request(year, month, days):
     }
 
     client = cdsapi.Client()
+    # print(request)
 
     target = os.path.join(DEST_DIR, f"{year}-{month}.grib")
-    client.retrieve(dataset, request, target).download()
+    client.retrieve(dataset, request, target)  # .download()
 
 
 def get_days_by_month(year):
