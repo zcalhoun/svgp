@@ -7,6 +7,8 @@ import argparse
 from calendar import monthrange
 import cdsapi
 
+DEST_DIR = "/work/zdc6/era5/"
+
 
 def main(args):
     """
