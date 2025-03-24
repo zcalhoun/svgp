@@ -71,7 +71,7 @@ def make_request(year, month, days):
         ],
         "data_format": "grib",
         "download_format": "unarchived",
-        "area": [36.23, -79.05, 35.75, -78.55],
+        "area": [36.3, -79.1, 35.8, -78.6],
     }
 
     client = cdsapi.Client()
