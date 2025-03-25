@@ -7,12 +7,39 @@ import os
 import sys
 import json
 import argparse
+import multiprocessing as mp
+
 import pandas as pd
 
 
 def main(arguments):
     """
     Run the main logic of collecting the data.
+    """
+
+    fp = arguments.station_data
+    stations = os.listdir(fp)
+
+    if arguments.test:
+        stations = stations[:100]
+
+    process_args = [(fp, station) for station in stations]
+
+    cpu_count = mp.cpu_count()
+    print(f"There are {cpu_count} cores")
+    all_data = []
+    with mp.Pool(processes=cpu_count) as pool:
+        for result in pool.imap_unordered(crawl_station, process_args):
+            all_data.append(result)
+
+    manifest = pd.DataFrame(all_data)
+    manifest.to_csv(arguments.output, index=False)
+
+
+def crawl_station(fp, station):
+    """
+    For each station, we are just going to crawl the data and return the
+    relevant information.
     """
 
     headers = [
@@ -26,54 +53,42 @@ def main(arguments):
         "end_lat",
         "end_lon",
     ]
-    fp = arguments.station_data
-    stations = os.listdir(fp)
 
-    # total = len(stations)
-    all_data = []
-    for station in simple_progress_bar(stations, prefix="Progress", size=50):
+    station_data = {key: "" for key in headers}
+    station_data["stationId"] = station
 
-        station_data = {key: "" for key in headers}
-        station_data["stationId"] = station
+    station_path = os.path.join(fp, station)
+    dates = os.listdir(station_path)
+    if len(dates) == 0:
+        return station_data
 
-        station_path = os.path.join(fp, station)
-        dates = os.listdir(station_path)
-        if len(dates) == 0:
-            all_data.append(station_data)
+    dates = sorted([d for d in dates if len(d) == 13])
+    station_data["min_date_checked"] = min(dates)
+    station_data["max_date_checked"] = max(dates)
+
+    for d in dates:
+        with open(os.path.join(station_path, d)) as data:
+            file = json.load(data)
+
+        if file is None:
             continue
-        dates = sorted([d for d in dates if len(d) == 13])
-        station_data["min_date_checked"] = min(dates)
-        station_data["max_date_checked"] = max(dates)
+        else:
+            station_data["start_lat"] = file["observations"][0]["lat"]
+            station_data["start_lon"] = file["observations"][0]["lon"]
+            station_data["min_date_reported"] = d
 
-        for d in dates:
-            with open(os.path.join(station_path, d)) as data:
-                file = json.load(data)
+    for d in reversed(dates):
+        with open(os.path.join(station_path, d)) as data:
+            file = json.load(data)
 
-            if file is None:
-                continue
-            else:
-                station_data["start_lat"] = file["observations"][0]["lat"]
-                station_data["start_lon"] = file["observations"][0]["lon"]
-                station_data["min_date_reported"] = d
+        if file is None:
+            continue
+        else:
+            station_data["end_lat"] = file["observations"][0]["lat"]
+            station_data["end_lon"] = file["observations"][0]["lon"]
+            station_data["max_date_reported"] = d
 
-        for d in reversed(dates):
-            with open(os.path.join(station_path, d)) as data:
-                file = json.load(data)
-
-            if file is None:
-                continue
-            else:
-                station_data["end_lat"] = file["observations"][0]["lat"]
-                station_data["end_lon"] = file["observations"][0]["lon"]
-                station_data["max_date_reported"] = d
-
-        all_data.append(station_data)
-        if arguments.test:
-            if len(all_data) > 10:
-                break
-
-    manifest = pd.DataFrame(all_data)
-    manifest.to_csv(arguments.output, index=False)
+    return station_data
 
 
 def simple_progress_bar(iterable, prefix="", size=50):
