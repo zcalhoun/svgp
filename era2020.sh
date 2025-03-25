@@ -8,6 +8,6 @@
 #SBATCH --mem=32G
 
 source ~/.bashrc
-conda activate geo
+conda activate pull-era-data
 
 python pull_era_data.py --year 2020
