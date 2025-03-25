@@ -36,11 +36,12 @@ def main(arguments):
     manifest.to_csv(arguments.output, index=False)
 
 
-def crawl_station(fp, station):
+def crawl_station(process_args):
     """
     For each station, we are just going to crawl the data and return the
     relevant information.
     """
+    fp, station = process_args
 
     headers = [
         "stationId",
