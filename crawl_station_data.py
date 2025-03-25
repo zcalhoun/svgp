@@ -71,23 +71,31 @@ def crawl_station(process_args):
         with open(os.path.join(station_path, d)) as data:
             file = json.load(data)
 
-        if file is None:
-            continue
-        else:
-            station_data["start_lat"] = file["observations"][0]["lat"]
-            station_data["start_lon"] = file["observations"][0]["lon"]
-            station_data["min_date_reported"] = d
+        try:
+            if file is None:
+                continue
+            else:
+                station_data["start_lat"] = file["observations"][0]["lat"]
+                station_data["start_lon"] = file["observations"][0]["lon"]
+                station_data["min_date_reported"] = d
+                break
+        except (json.JSONDecodeError, FileNotFoundError) as e:
+            print(f"Error reading json with {station} and {d}: {e}")
 
     for d in reversed(dates):
         with open(os.path.join(station_path, d)) as data:
             file = json.load(data)
 
-        if file is None:
-            continue
-        else:
-            station_data["end_lat"] = file["observations"][0]["lat"]
-            station_data["end_lon"] = file["observations"][0]["lon"]
-            station_data["max_date_reported"] = d
+        try:
+            if file is None:
+                continue
+            else:
+                station_data["end_lat"] = file["observations"][0]["lat"]
+                station_data["end_lon"] = file["observations"][0]["lon"]
+                station_data["max_date_reported"] = d
+                break
+        except (json.JSONDecodeError, FileNotFoundError) as e:
+            print(f"Error reading json with {station} and {d}: {e}")
 
     return station_data
 
