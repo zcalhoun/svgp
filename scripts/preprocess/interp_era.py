@@ -32,7 +32,7 @@ def main(args):
     for i, row in enumerate(station_paths):
         # Print the progress
         print(f"Processing station {i + 1}/{len(station_paths)}")
-        print(f"Station ID: {row[2]}")
+        print(f"Arguments: {row}")
         # print the time
         print(f"Time: {pd.Timestamp.now()}")
         interpolate_era5_data(row)
@@ -60,7 +60,8 @@ def interpolate_era5_data(args):
     station_results = []
 
     process_args = [[os.path.join(input_dir, fp), lat, lon] for fp in era5_files]
-
+    print(process_args)
+    return None
     cpu_count = mp.cpu_count()
 
     # Use multiprocessing to fetch the data
