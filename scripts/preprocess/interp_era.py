@@ -28,8 +28,11 @@ def main(args):
         for _, s in stations.iterrows()
     ]
 
-    for row in station_paths:
-        print(row)
+    for i, row in enumerate(station_paths):
+        # Print the progress
+        print(f"Processing station {i + 1}/{len(station_paths)}")
+        print(f"Station ID: {row[2]}")
+        interpolate_era5_data(row)
 
 
 def get_stations(directory):
