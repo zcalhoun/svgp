@@ -16,7 +16,7 @@ def main(args):
 
     task_id = os.getenv("SLURM_ARRAY_TASK_ID")
     file = get_file(int(task_id))
-    print(f"{task_id}, File: {file}")
+    print(f"{task_id}, File: {file}", flush=True)
     stations = get_stations(args.station_list)
 
     if args.test:
@@ -35,7 +35,10 @@ def main(args):
             lon = row["lon"]
             lat = row["lat"]
             # Print the progress
-            print(f"Processing station {stationId}, which is {i} of {len(stations)}")
+            print(
+                f"Processing station {stationId}, which is {i+1} of {len(stations)}",
+                flush=True,
+            )
             # continue
             ds_point = ds.interp(latitude=lat, longitude=lon, method="linear")
 
