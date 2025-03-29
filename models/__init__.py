@@ -10,6 +10,8 @@ from .vnngp import (
     BaseVNNGP_PeriodicFeatures_time,
 )
 
+from .deep_ps_gp import *
+
 
 def load(model_name, *args, **kwargs):
     """Handles loading the necessary model."""
