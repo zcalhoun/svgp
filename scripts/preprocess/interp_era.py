@@ -61,7 +61,7 @@ def interpolate_era5_data(args):
 
     process_args = [[os.path.join(input_dir, fp), lat, lon] for fp in era5_files]
     print(process_args)
-    return None
+    # return None
     cpu_count = mp.cpu_count()
 
     # Use multiprocessing to fetch the data
