@@ -58,17 +58,17 @@ def interpolate_era5_data(args):
     for month in era5_files:
         print("Processing month:", month)
         # Read the file
-        ds = xr.open_dataset(os.path.join(input_dir, month), engine="cfgrib").load()
+        with xr.open_dataset(os.path.join(input_dir, month), engine="cfgrib") as ds:
 
-        # Select the data for the station
-        ds = ds.interp(latitude=lat, longitude=lon, method="linear")
+            # Select the data for the station
+            ds = ds.interp(latitude=lat, longitude=lon, method="linear")
 
-        # Convert to pandas dataframe
-        df = (
-            ds.to_dataframe()
-            .reset_index()
-            .dropna()[["valid_time", "t2m", "d2m", "u10", "v10"]]
-        )
+            # Convert to pandas dataframe
+            df = (
+                ds.to_dataframe()
+                .reset_index()
+                .dropna()[["valid_time", "t2m", "d2m", "u10", "v10"]]
+            )
 
         # Save to CSV
         station_results.append(df)
