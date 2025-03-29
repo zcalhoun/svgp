@@ -1,7 +1,6 @@
 """
-This script goes through all of the stations and agreggates all of the data into a CSV
-file, so that the data can be analyzed.
-
+This script opens up a specific ERA file, and interpolates the data for a given set
+of stations.
 """
 
 import os
@@ -15,28 +14,46 @@ import xarray as xr
 
 def main(args):
 
-    # Obtain the list of stations in the input directory
+    task_id = os.getenv("SLURM_ARRAY_TASK_ID")
+    file = get_file(int(task_id))
+    print(f"{task_id}, File: {file}")
     stations = get_stations(args.station_list)
 
     if args.test:
         print("Running in test mode")
-        stations = stations[:10]
+        stations = stations[:2]
         print(f"Number of stations: {len(stations)}")
         print(f"Stations: {stations}")
 
-    # Create station_paths
-    station_paths = [
-        [args.input, args.output, s["stationId"], s["lat"], s["lon"]]
-        for _, s in stations.iterrows()
-    ]
+    fp = os.path.join(args.input, file)
 
-    for i, row in enumerate(station_paths):
-        # Print the progress
-        print(f"Processing station {i + 1}/{len(station_paths)}")
-        print(f"Arguments: {row}")
-        # print the time
-        print(f"Time: {pd.Timestamp.now()}")
-        interpolate_era5_data(row)
+    all_data = []
+    with xr.open_dataset(fp, engine="cfgrib") as ds:
+
+        for i, row in stations.iterrows():
+            stationId = row["stationId"]
+            lon = row["lon"]
+            lat = row["lat"]
+            # Print the progress
+            print(f"Processing station {stationId}, which is {i} of {len(stations)}")
+            # continue
+            ds_point = ds.interp(latitude=lat, longitude=lon, method="linear")
+
+            df = (
+                ds_point.to_dataframe()
+                .reset_index()
+                .dropna()[["valid_time", "t2m", "d2m", "u10", "v10"]]
+            )
+            df["stationId"] = stationId
+            all_data.append(df)
+
+    # Concatenate the results
+    all_data = pd.concat(all_data)
+
+    # Save to CSV
+    output_file = os.path.join(args.output, f"{file[:-5]}.csv")
+
+    all_data.to_csv(output_file, index=False)
 
 
 def get_stations(directory):
@@ -48,64 +65,17 @@ def get_stations(directory):
     return df
 
 
-def interpolate_era5_data(args):
+def get_file(task_id):
     """
-    This function iterates over the ERA5 files and interpolates the data for the given station.
-
-    The results are then saved to a CSV.
+    Get the file name from the task id.
     """
-    input_dir, output_dir, station_id, lat, lon = args
-
-    era5_files = os.listdir(input_dir)
-
-    station_results = []
-
-    process_args = [[os.path.join(input_dir, fp), lat, lon] for fp in era5_files]
-    # return None
-    cpu_count = mp.cpu_count()
-
-    # Use multiprocessing to fetch the data
-    with mp.Pool(processes=20) as pool:
-        for result in pool.imap(extract_data, process_args):
-            print(len(result))
-            station_results.append(result)
-
-    for f in glob.glob(os.path.join(input_dir, "*.idx")):
-        os.remove(f)
-
-    # Concatenate the results
-    station_results = pd.concat(station_results)
-    station_results["stationId"] = station_id
-
-    # Save to CSV
-    output_file = os.path.join(output_dir, f"{station_id}.csv")
-    station_results.to_csv(output_file, index=False)
-
-
-def extract_data(args):
-    """
-    Open the file and extract the data for the given station.
-    """
-
-    era_fp, lat, lon = args
-
-    ds = xr.open_dataset(era_fp, engine="cfgrib")
-
-    # Select the data for the station
-    ds_point = ds.interp(latitude=lat, longitude=lon, method="linear")
-
-    # Convert to pandas dataframe
-    df = (
-        ds_point.to_dataframe()
-        .reset_index()
-        .dropna()[["valid_time", "t2m", "d2m", "u10", "v10"]]
-    )
-
-    return df
+    date_range = pd.date_range(start="2019-01-01", end="2025-01-01", freq="M")
+    formatted_dates = date_range.strftime("%Y-%m").tolist()
+    return f"{formatted_dates[task_id]}.grib"
 
 
 if __name__ == "__main__":
-    # Set up the argparse
+
     parser = argparse.ArgumentParser(
         description="Interpolate the ERA5 data for the stations given."
     )
@@ -125,11 +95,6 @@ if __name__ == "__main__":
         type=str,
     )
 
-    # add argument for cpu_count
-    parser.add_argument(
-        "-c", "--cpu_count", help="The number of CPUs to use", default=None, type=int
-    )
-
     parser.add_argument(
         "--test",
         help="Run the script in test mode",
@@ -140,5 +105,4 @@ if __name__ == "__main__":
     # Parse the arguments
     arguments = parser.parse_args()
 
-    # Run the main function
     main(arguments)
