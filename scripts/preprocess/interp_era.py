@@ -5,6 +5,7 @@ file, so that the data can be analyzed.
 """
 
 import os
+import glob
 import argparse
 import multiprocessing as mp
 
@@ -66,7 +67,11 @@ def interpolate_era5_data(args):
     # Use multiprocessing to fetch the data
     with mp.Pool(processes=cpu_count) as pool:
         for result in pool.imap(extract_data, process_args):
+            print(len(result))
             station_results.append(result)
+
+    for f in glob.glob(os.path.join(input_dir, "*.idx")):
+        os.remove(f)
 
     # Concatenate the results
     station_results = pd.concat(station_results)
@@ -96,7 +101,7 @@ def extract_data(args):
             .dropna()[["valid_time", "t2m", "d2m", "u10", "v10"]]
         )
 
-    return df
+        return df
 
 
 if __name__ == "__main__":
