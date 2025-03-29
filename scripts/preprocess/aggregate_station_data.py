@@ -98,7 +98,7 @@ def obtain_station_data(args):
 
         try:
             assert "observations" in data_file
-        except AssertionError:
+        except TypeError:
             print(f"File {file} does not contain observations for station {station}.")
             continue
 
@@ -113,7 +113,7 @@ def obtain_station_data(args):
                         row.append(str(obs["metric"][col]))
 
                     data += ",".join(row) + "\n"
-            except KeyError as e:
+            except:
                 print(f"Date {file} is not iterable for station {station}.")
 
     return data
