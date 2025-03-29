@@ -30,14 +30,17 @@ def main(args):
     all_data = []
     with xr.open_dataset(fp, engine="cfgrib") as ds:
 
-        for stationId, lat, lon in zip(
-            stations["stationId"].values,
-            stations["lat"].values,
-            stations["lon"].values,
-        ):
+        for i, row in stations.iterrows():
+            station = row["stationId"]
+            lon = row["lon"]
+            lat = row["lat"]
+            print(f"lon: {lon}, lat: {lat}")
             # Print the progress
             print(f"Processing station {stationId}")
-            ds_point = ds.interp(latitude=lat, longitude=lon, method="linear")
+            continue
+            ds_point = ds.interp(
+                latitude=lat.tolist(), longitude=lon.tolist(), method="linear"
+            )
 
             df = (
                 ds_point.to_dataframe()
