@@ -38,9 +38,7 @@ def main(args):
             # Print the progress
             print(f"Processing station {stationId}")
             # continue
-            ds_point = ds.interp(
-                latitude=lat.tolist(), longitude=lon.tolist(), method="linear"
-            )
+            ds_point = ds.interp(latitude=lat, longitude=lon, method="linear")
 
             df = (
                 ds_point.to_dataframe()
