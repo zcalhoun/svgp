@@ -82,21 +82,19 @@ def extract_data(args):
     Open the file and extract the data for the given station.
     """
 
-    era_fps, lat, lon = args
+    era_fp, lat, lon = args
 
-    for fp in era_fps:
-        # Read the file
-        with xr.open_dataset(fp, engine="cfgrib") as ds:
+    with xr.open_dataset(era_fp, engine="cfgrib") as ds:
 
-            # Select the data for the station
-            ds_point = ds.interp(latitude=lat, longitude=lon, method="linear")
+        # Select the data for the station
+        ds_point = ds.interp(latitude=lat, longitude=lon, method="linear")
 
-            # Convert to pandas dataframe
-            df = (
-                ds_point.to_dataframe()
-                .reset_index()
-                .dropna()[["valid_time", "t2m", "d2m", "u10", "v10"]]
-            )
+        # Convert to pandas dataframe
+        df = (
+            ds_point.to_dataframe()
+            .reset_index()
+            .dropna()[["valid_time", "t2m", "d2m", "u10", "v10"]]
+        )
 
     return df
 
