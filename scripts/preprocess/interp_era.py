@@ -6,6 +6,7 @@ file, so that the data can be analyzed.
 
 import os
 import argparse
+import multiprocessing as mp
 
 import pandas as pd
 import xarray as xr
@@ -32,6 +33,8 @@ def main(args):
         # Print the progress
         print(f"Processing station {i + 1}/{len(station_paths)}")
         print(f"Station ID: {row[2]}")
+        # print the time
+        print(f"Time: {pd.Timestamp.now()}")
         interpolate_era5_data(row)
 
 
@@ -55,23 +58,15 @@ def interpolate_era5_data(args):
     era5_files = os.listdir(input_dir)
 
     station_results = []
-    for month in era5_files:
-        print("Processing month:", month)
-        # Read the file
-        with xr.open_dataset(os.path.join(input_dir, month), engine="cfgrib") as ds:
 
-            # Select the data for the station
-            ds = ds.interp(latitude=lat, longitude=lon, method="linear")
+    process_args = [[os.path.join(input_dir, fp), lat, lon] for fp in era5_files]
 
-            # Convert to pandas dataframe
-            df = (
-                ds.to_dataframe()
-                .reset_index()
-                .dropna()[["valid_time", "t2m", "d2m", "u10", "v10"]]
-            )
+    cpu_count = mp.cpu_count()
 
-        # Save to CSV
-        station_results.append(df)
+    # Use multiprocessing to fetch the data
+    with mp.Pool(processes=cpu_count) as pool:
+        for result in pool.imap(extract_data, process_args):
+            station_results.append(result)
 
     # Concatenate the results
     station_results = pd.concat(station_results)
@@ -80,7 +75,30 @@ def interpolate_era5_data(args):
     # Save to CSV
     output_file = os.path.join(output_dir, f"{station_id}.csv")
     station_results.to_csv(output_file, index=False)
-    return output_file
+
+
+def extract_data(args):
+    """
+    Open the file and extract the data for the given station.
+    """
+
+    era_fps, lat, lon = args
+
+    for fp in era_fps:
+        # Read the file
+        with xr.open_dataset(fp, engine="cfgrib") as ds:
+
+            # Select the data for the station
+            ds_point = ds.interp(latitude=lat, longitude=lon, method="linear")
+
+            # Convert to pandas dataframe
+            df = (
+                ds_point.to_dataframe()
+                .reset_index()
+                .dropna()[["valid_time", "t2m", "d2m", "u10", "v10"]]
+            )
+
+    return df
 
 
 if __name__ == "__main__":
