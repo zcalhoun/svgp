@@ -60,7 +60,6 @@ def interpolate_era5_data(args):
     station_results = []
 
     process_args = [[os.path.join(input_dir, fp), lat, lon] for fp in era5_files]
-    print(process_args)
     # return None
     cpu_count = mp.cpu_count()
 
