@@ -26,13 +26,18 @@ def main(args):
     stations = get_stations(args.station_list)
 
     if args.test:
+        print("Running in test mode")
         stations = stations[:10]
+        print(f"Number of stations: {len(stations)}")
+        print(f"Stations: {stations}")
 
     # Create the CSV file with the columns requested
     if args.cpu_count is None:
         cpu_count = mp.cpu_count()
     else:
         cpu_count = args.cpu_count
+
+    print(f"Using {cpu_count} CPUs")
 
     # Create the CSV file with headers
     # Create headers with text before . removed
