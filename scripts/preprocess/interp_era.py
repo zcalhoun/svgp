@@ -56,9 +56,9 @@ def interpolate_era5_data(args):
 
     station_results = []
     for month in era5_files:
-
+        print("Processing month:", month)
         # Read the file
-        ds = xr.open_dataset(os.path.join(input_dir, month), engine="cfgrib")
+        ds = xr.open_dataset(os.path.join(input_dir, month), engine="cfgrib").load()
 
         # Select the data for the station
         ds = ds.interp(latitude=lat, longitude=lon, method="linear")
