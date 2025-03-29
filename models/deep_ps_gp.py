@@ -7,6 +7,7 @@ Date: 02/27/2025
 
 import torch
 import gpytorch
+from gpytorch.models.deep_gps import DeepGPLayer
 import pyro
 
 import pyro.distributions.constraints as constraints
@@ -32,7 +33,6 @@ class LAYER_1(gpytorch.models.ApproximateGP):
         # than the tutorial in that respect.
         self.name_prefix = name_prefix
         self.area = area
-        self.mean_intensity = num_points / (area[0] * area[1])
         self.beta = beta
 
         # Define the variational distribution and strategy of the GP
@@ -56,7 +56,7 @@ class LAYER_1(gpytorch.models.ApproximateGP):
             learn_inducing_locations=learn_inducing_locations,
         )
 
-        super().__init__(variational_strategy=variational_strategy)
+        super().__init__(variational_strategy)  # , 2, 1)
 
         self.mean_module = gpytorch.means.ZeroMean()
         self.covar_module = gpytorch.kernels.ScaleKernel(gpytorch.kernels.RBFKernel())
@@ -171,21 +171,21 @@ class LAYER_2(gpytorch.models.PyroGP):
             num_inducing_points=num_points
         )
 
-        inducing_points = torch.randn(num_points).unsqueeze(-1)
+        inducing_points = torch.randn(num_points, 3)  # .unsqueeze(-1)
 
-        if inducing_point_prior is not None:
-            variational_distribution.initialize_variational_distribution(
-                inducing_point_prior
-            )
-        else:
-            inducing_point_prior = gpytorch.distributions.MultivariateNormal(
-                inducing_points.flatten(),
-                torch.eye(inducing_points.numel()) * 1.0,
-            )
+        # if inducing_point_prior is not None:
+        #     variational_distribution.initialize_variational_distribution(
+        #         inducing_point_prior
+        #     )
+        # else:
+        #     inducing_point_prior = gpytorch.distributions.MultivariateNormal(
+        #         inducing_points.flatten(),
+        #         torch.eye(inducing_points.numel()) * 1.0,
+        #     )
 
-            variational_distribution.initialize_variational_distribution(
-                inducing_point_prior
-            )
+        #     variational_distribution.initialize_variational_distribution(
+        #         inducing_point_prior
+        #     )
 
         # initialize the points
 
@@ -197,7 +197,7 @@ class LAYER_2(gpytorch.models.PyroGP):
         )
         likelihood = gpytorch.likelihoods.GaussianLikelihood(
             # noise_constraint=constraints.positive,
-            noise_prior=gpytorch.priors.UniformPrior(0.001, 0.5),
+            noise_prior=gpytorch.priors.HalfNormalPrior(0.1),
         )
 
         likelihood.noise = 0.01
@@ -207,8 +207,10 @@ class LAYER_2(gpytorch.models.PyroGP):
         )
 
         self.likelihood = likelihood
-        self.mean_module = gpytorch.means.ConstantMean()  # (input_size=1)
-        self.covar_module = gpytorch.kernels.LinearKernel()
+        self.mean_module = gpytorch.means.ZeroMean()  # (input_size=1)
+        self.covar_module = gpytorch.kernels.LinearKernel(
+            active_dims=0
+        ) + gpytorch.kernels.ScaleKernel(gpytorch.kernels.RBFKernel(active_dims=(1, 2)))
 
         # (
         #     gpytorch.kernels.LinearKernel()
@@ -227,10 +229,24 @@ class DeepGP(pyro.nn.PyroModule):
     """
 
     def __init__(
-        self, X, area, layer_2_ind_pts=10, layer_1_inducing=(10.0, 10.0), beta=1.0
+        self,
+        X,
+        area,
+        layer_2_ind_pts=10,
+        layer_1_inducing_area=(10.0, 10.0),
+        beta=1.0,
+        l1_inducing_points=None,
+        l1_inducing_point_prior=None,
     ):
         super(DeepGP, self).__init__()
-        self.layer1 = LAYER_1(X, area, num_inducing=layer_1_inducing, beta=beta)
+        self.layer1 = LAYER_1(
+            X,
+            area,
+            inducing_points=l1_inducing_points,
+            num_inducing=layer_1_inducing_area,
+            beta=beta,
+            inducing_point_prior=l1_inducing_point_prior,
+        )
         self.layer2 = LAYER_2(layer_2_ind_pts)
 
     def model(self, X, quadrature_points, y):
@@ -238,14 +254,21 @@ class DeepGP(pyro.nn.PyroModule):
         The compound model for the deep GP.
         """
         z = self.layer1.model(X, quadrature_points)
-        self.layer2.model(z.unsqueeze(-1), y)
+        z = torch.cat([z.unsqueeze(-1), X], dim=-1)
+        self.layer2.model(z, y)
 
     def guide(self, X, quadrature_points, y):
         """
         The compound guide for the deep GP.
         """
         z = self.layer1.guide(X, quadrature_points)
-        self.layer2.guide(z.unsqueeze(-1), y)
+        # Concat z and x
+        # print(z.shape)
+        if len(z.shape) == 1:
+            z = z.unsqueeze(-1)
+        z = torch.cat([z, X], dim=-1)
+        # print(f"z shape: {z.shape}")
+        self.layer2.guide(z, y)
 
     def forward(self, X):
         """
@@ -253,4 +276,5 @@ class DeepGP(pyro.nn.PyroModule):
         """
         # Sample from the model
         z = self.layer1(X)
-        return self.layer2(z.mean)
+        z = torch.cat([z.mean.unsqueeze(-1), X], dim=-1)
+        return self.layer2(z)

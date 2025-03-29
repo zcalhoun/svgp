@@ -10,3 +10,4 @@
 /archive/*
 *.log
 /experiments/*
+test/
