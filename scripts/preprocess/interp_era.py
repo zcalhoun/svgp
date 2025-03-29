@@ -5,9 +5,7 @@ file, so that the data can be analyzed.
 """
 
 import os
-import json
 import argparse
-import multiprocessing as mp
 
 import pandas as pd
 import xarray as xr
@@ -24,23 +22,14 @@ def main(args):
         print(f"Number of stations: {len(stations)}")
         print(f"Stations: {stations}")
 
-    # Create the CSV file with the columns requested
-    if args.cpu_count is None:
-        cpu_count = mp.cpu_count()
-    else:
-        cpu_count = args.cpu_count
-
-    print(f"Using {cpu_count} CPUs")
-
     # Create station_paths
     station_paths = [
         [args.input, args.output, s["stationId"], s["lat"], s["lon"]]
         for _, s in stations.iterrows()
     ]
-    # Use multiprocessing to fetch the data
-    with mp.Pool(processes=cpu_count) as pool:
-        for result in pool.imap(interpolate_era5_data, station_paths):
-            print(f"File created: {result}")
+
+    for row in station_paths:
+        print(row)
 
 
 def get_stations(directory):
