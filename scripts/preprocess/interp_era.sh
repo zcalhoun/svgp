@@ -1,7 +1,13 @@
 #!/bin/bash
 
-python interp_era.py \
-    --input /work/zdc6/era5/ \
-    --output /work/zdc6/weather_underground/durham/era_by_station/ \
-    --station_list /work/zdc6/weather_underground/durham/stations.csv \
-    --test
+#SBATCH --job-name=aggregate_era
+#SBATCH --array=0-71         # Adjust this based on number of files - 1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --time=00:30:00
+#SBATCH --output=./logs/output_%A_%a.txt
+
+source ~/.bashrc
+conda activate era
+
+python test_interp_era.py
