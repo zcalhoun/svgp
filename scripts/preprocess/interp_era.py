@@ -65,7 +65,7 @@ def interpolate_era5_data(args):
     cpu_count = mp.cpu_count()
 
     # Use multiprocessing to fetch the data
-    with mp.Pool(processes=cpu_count) as pool:
+    with mp.Pool(processes=20) as pool:
         for result in pool.imap(extract_data, process_args):
             print(len(result))
             station_results.append(result)
@@ -89,19 +89,19 @@ def extract_data(args):
 
     era_fp, lat, lon = args
 
-    with xr.open_dataset(era_fp, engine="cfgrib") as ds:
+    ds = xr.open_dataset(era_fp, engine="cfgrib")
 
-        # Select the data for the station
-        ds_point = ds.interp(latitude=lat, longitude=lon, method="linear")
+    # Select the data for the station
+    ds_point = ds.interp(latitude=lat, longitude=lon, method="linear")
 
-        # Convert to pandas dataframe
-        df = (
-            ds_point.to_dataframe()
-            .reset_index()
-            .dropna()[["valid_time", "t2m", "d2m", "u10", "v10"]]
-        )
+    # Convert to pandas dataframe
+    df = (
+        ds_point.to_dataframe()
+        .reset_index()
+        .dropna()[["valid_time", "t2m", "d2m", "u10", "v10"]]
+    )
 
-        return df
+    return df
 
 
 if __name__ == "__main__":
