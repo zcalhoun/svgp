@@ -51,6 +51,10 @@ def main(args):
         ]
     ]
 
+    print("Converting the temperature to Celsius.", flush=True)
+    df["t2m"] = df["t2m"] - 273.15
+    df["d2m"] = df["d2m"] - 273.15
+
     print("Data merged, now saving to parquet.", flush=True)
     df.to_parquet(
         args.destination_dir,
