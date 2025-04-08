@@ -87,7 +87,7 @@ def main(args):
     # Train the model
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
-    mll = set_up_loss(args.loss_function, likelihood, model)
+    mll = set_up_loss(args.loss_function, likelihood, model, train_y.size(0))
 
     test_ds = TensorDataset(test_X, test_y)
     test_loader = DataLoader(test_ds, batch_size=args.batch_size, shuffle=False)
@@ -132,19 +132,15 @@ def main(args):
     epoch_losses.to_csv(os.path.join(args.output, "epoch_losses.csv"), index=False)
 
 
-def set_up_loss(loss_function, likelihood, model):
+def set_up_loss(loss_function, likelihood, model, size):
     """
     Set up the loss function for the model
     """
 
     if loss_function == "ELBO":
-        mll = gpytorch.mlls.VariationalELBO(
-            likelihood, model, num_data=model.num_inducing_points
-        )
+        mll = gpytorch.mlls.VariationalELBO(likelihood, model, num_data=size)
     elif loss_function == "PLL":
-        mll = gpytorch.mlls.PredictiveLogLikelihood(
-            likelihood, model, num_data=model.num_inducing_points
-        )
+        mll = gpytorch.mlls.PredictiveLogLikelihood(likelihood, model, num_data=size)
     else:
         raise ValueError(f"Unknown loss function: {loss_function}")
 
