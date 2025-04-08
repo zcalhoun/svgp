@@ -15,7 +15,7 @@ source gp/bin/activate
 python vnngp_fit.py \
     --data_directory /work/zdc6/weather_underground/durham/combined/ \
     --output /work/zdc6/exp2/test/ \
-    --num_epochs 20 \
+    --num_epochs 2 \
     --n_neighbors 64 \
     --year 2023 \
     --month 7 \

@@ -117,7 +117,7 @@ def main(args):
             f"Validation Log Probability: {val_prob:.3f} - "
             f"Validation MSE: {val_mse:.3f}"
         )
-        epoch_losses.append(epoch, train_loss, val_prob, val_mse)
+        epoch_losses.append([epoch, train_loss, val_prob, val_mse])
 
     # After training, let's get predictions on all of the data
     preds = predict(model, likelihood, test_loader)
