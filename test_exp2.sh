@@ -16,7 +16,7 @@ python vnngp_fit.py \
     --data_directory /work/zdc6/weather_underground/durham/combined/ \
     --output /work/zdc6/exp2/test/ \
     --num_epochs 20 \
-    --num_neighbors 64 \
+    --n_neighbors 64 \
     --year 2023 \
     --month 7 \
     --name TEST \
