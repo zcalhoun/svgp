@@ -43,12 +43,19 @@ def main(args):
     # Load the data
     logger.info(args)
 
+    # Validate the output directory
+    if not os.path.exists(args.output):
+        os.makedirs(args.output)
+
     train_X, train_y, test_X, test_y, test_df = load_data(
         args.data_directory,
         year=args.year,
         month=args.month,
         train_size=args.train_size,
     )
+
+    logger.info("Data loaded")
+    logger.info(f"Train data shape: {train_X.shape}")
 
     mean_weights, mean_bias = init_mean_coefs(train_y)
 
@@ -269,7 +276,7 @@ class VNNGP(ApproximateGP):
         self.mean_module = gpytorch.means.LinearMean(2)
         self.mean_module.weights.data = mean_weights
         self.mean_module.bias.data = mean_bias
-        # ['t2m', 'PC1', 'hour', 'sin_hour', 'cos_hour', 'lat', 'lon']
+
         self.covar_module = gpytorch.kernels.ScaleKernel(
             gpytorch.kernels.MaternKernel(nu=1.5, active_dims=(5, 6), ard=2)
             * (
@@ -317,8 +324,8 @@ def load_data(data_directory, year="*", month="*", train_size=0.8, random_seed=4
     train_stations = all_stations[:split_index]
     test_stations = all_stations[split_index:]
 
-    train_paths = get_all_paths(train_stations)
-    test_paths = get_all_paths(test_stations)
+    train_paths = get_all_paths(train_stations, year=year, month=month)
+    test_paths = get_all_paths(test_stations, year=year, month=month)
 
     train_df = load_dataset(train_paths)
     test_df = load_dataset(test_paths)
@@ -370,10 +377,17 @@ def load_dataset(paths):
 
 
 def get_all_paths(station_path_list, month="*", year="*"):
+    """
+    This function finds all of the paths to the data files for
+    a given set of stations, month, and year.
+    """
+
     all_paths = []
     for station_path in station_path_list:
         all_paths.extend(
-            glob.glob(os.path.join(station_path, "year=2023/month=7/*.parquet"))
+            glob.glob(
+                os.path.join(station_path, f"year={year}/month={month}/*.parquet")
+            )
         )
     return all_paths
 
