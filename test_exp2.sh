@@ -12,7 +12,7 @@
 
 source gp/bin/activate
 
-python vnggp_fit.py \
+python vnngp_fit.py \
     --data_directory /work/zdc6/weather_underground/durham/combined/ \
     --output /work/zdc6/exp2/test/ \
     --num_epochs 20 \
