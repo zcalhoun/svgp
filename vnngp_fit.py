@@ -432,6 +432,13 @@ if __name__ == "__main__":
         "--lr", type=float, default=0.01, help="Learning rate for the optimizer"
     )
 
+    parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=256,
+        help="Batch size for training and testing",
+    )
+
     # Add a loss function with choices "ELBO" and "PLL"
     parser.add_argument(
         "--loss_function",
