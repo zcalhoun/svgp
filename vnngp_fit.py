@@ -54,6 +54,10 @@ def main(args):
         train_size=args.train_size,
     )
 
+    if args.time_multiplier is not None:
+        train_X[:, 2] *= args.time_multiplier
+        test_X[:, 2] *= args.time_multiplier
+
     logger.info("Data loaded")
     logger.info(f"Train data shape: {train_X.shape}")
 
@@ -108,8 +112,10 @@ def main(args):
         if epoch > 10:
             if val_mse < best_mse:
                 best_mse = val_mse
-                torch.save(model.state_dict(), args.output)
-                torch.save(likelihood.state_dict(), args.output)
+                torch.save(model.state_dict(), os.path.join(args.output, "model.pt"))
+                torch.save(
+                    likelihood.state_dict(), os.path.join(args.output, "likelihood.pt")
+                )
 
         logger.info(
             f"Epoch {epoch + 1}/{args.num_epochs} - "
@@ -118,6 +124,11 @@ def main(args):
             f"Validation MSE: {val_mse:.3f}"
         )
         epoch_losses.append([epoch, train_loss, val_prob, val_mse])
+
+    # Load the state dict
+    logger.info("Loading the best model")
+    model.load_state_dict(torch.load(os.path.join(args.output, "model.pt")))
+    likelihood.load_state_dict(torch.load(os.path.join(args.output, "likelihood.pt")))
 
     # After training, let's get predictions on all of the data
     preds = predict(model, likelihood, test_loader)
@@ -442,6 +453,13 @@ if __name__ == "__main__":
         default="ELBO",
         choices=["ELBO", "PLL"],
         help="Loss function to use",
+    )
+
+    parser.add_argument(
+        "--time_multiplier",
+        type=float,
+        default=None,
+        help="Multiplier for the time feature",
     )
 
     args = parser.parse_args()
