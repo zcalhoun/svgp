@@ -61,7 +61,7 @@ def main(args):
 
     if torch.cuda.is_available():
         logger.info("Using GPU for training")
-        train_X = train_X.cuda()
+        train_X = train_X.cuda().contiguous()
         train_y = train_y.cuda()
 
     # Initialize the model
