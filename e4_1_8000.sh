@@ -18,7 +18,7 @@ python svgp_fit.py \
     --num_epochs 100 \
     --num_inducing_points 8000 \
     --name e4_1_8000 \
-    --batch_size 4096 \
+    --batch_size 1024 \
     --year 2023 \
     --month 7 \
     --lr 0.01
