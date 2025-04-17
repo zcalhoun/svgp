@@ -77,7 +77,13 @@ def main(args):
         likelihood = likelihood.cuda()
 
     # Train the model
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+    optimizer = torch.optim.Adam(
+        [
+            {"params": model.parameters()},
+            {"params": likelihood.parameters()},
+        ],
+        lr=args.lr,
+    )
     mll = set_up_loss(args.loss_function, likelihood, model, train_y.size(0))
 
     # Create the train dataset
