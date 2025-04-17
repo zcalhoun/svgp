@@ -21,4 +21,4 @@ python svgp_fit.py \
     --batch_size 4096 \
     --year 2023 \
     --month 7 \
-    --lr 0.1
+    --lr 0.01
