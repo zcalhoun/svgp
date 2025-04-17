@@ -239,7 +239,7 @@ def init_mean_coefs(train_y):
     This will drastically improve initial model performance.
     """
     mean = torch.ones(2)
-    mean[0] = torch.quantile(train_y, torch.tensor([0.02, 0.98])).diff() / 2
+    mean[0] = 1  # torch.quantile(train_y, torch.tensor([0.02, 0.98])).diff() / 2
     mean[1] = 0.1
 
     return mean, train_y.mean()
