@@ -65,7 +65,7 @@ def main(args):
         + train_X.min(0).values
     )
     model = SVGP(
-        inducing_points=train_X,
+        inducing_points=inducing_points,
         mean_weights=mean_weights,
         mean_bias=mean_bias,
     )
