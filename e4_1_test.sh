@@ -21,4 +21,4 @@ python svgp_fit.py \
     --batch_size 1024 \
     --year 2023 \
     --month 7 \
-    --num_epochs 11 \
+    --num_epochs 20 \
