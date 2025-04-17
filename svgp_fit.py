@@ -22,7 +22,11 @@ import pandas as pd
 # implementation of the VNNGP.
 import gpytorch
 from gpytorch.models import ApproximateGP
-from gpytorch.variational import CholeskyVariationalDistribution, VariationalStrategy
+from gpytorch.variational import (
+    CholeskyVariationalDistribution,
+    VariationalStrategy,
+    NaturalVariationalDistribution,
+)
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 from src.utils import SimpleLogger
@@ -84,6 +88,11 @@ def main(args):
         ],
         lr=args.lr,
     )
+
+    variational_ngd_optimizer = gpytorch.optim.NGD(
+        model.variational_parameters(), num_data=train_y.size(0), lr=args.variational_lr
+    )
+
     mll = set_up_loss(args.loss_function, likelihood, model, train_y.size(0))
 
     # Create the train dataset
@@ -102,7 +111,9 @@ def main(args):
 
         logger.start_timer("TRAIN")
         logger.info(f"Epoch {epoch + 1}/{args.num_epochs}")
-        train_loss = train(model, likelihood, mll, optimizer, train_loader)
+        train_loss = train(
+            model, likelihood, mll, optimizer, variational_ngd_optimizer, train_loader
+        )
         logger.stop_timer("TRAIN")
 
         logger.start_timer("VALIDATE")
@@ -205,7 +216,7 @@ def validate(model, likelihood, test_loader):
     return log_prob.item(), mse.item()
 
 
-def train(model, likelihood, mll, optimizer, train_loader):
+def train(model, likelihood, mll, optimizer, variational_ngd_optimizer, train_loader):
     """
     This function runs the train loader to train the model.
     """
@@ -224,6 +235,7 @@ def train(model, likelihood, mll, optimizer, train_loader):
         loss = -mll(output, y_batch)
         loss.backward()
         optimizer.step()
+        variational_ngd_optimizer.step()
         epoch_loss += loss.item()
         epoch_count += y_batch.size(0)
 
@@ -261,7 +273,7 @@ class SVGP(ApproximateGP):
         Define the VNNGP model
         """
 
-        variational_distribution = CholeskyVariationalDistribution(
+        variational_distribution = NaturalVariationalDistribution(
             num_inducing_points=inducing_points.size(0)
         )
 
@@ -457,6 +469,13 @@ if __name__ == "__main__":
         type=int,
         default=100,
         help="Number of inducing points to use for the model",
+    )
+
+    parser.add_argument(
+        "--variational_lr",
+        type=float,
+        default=0.1,
+        help="Learning rate for the variational optimizer",
     )
 
     args = parser.parse_args()
