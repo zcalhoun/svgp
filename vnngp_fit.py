@@ -72,7 +72,8 @@ def main(args):
 
     logger.start_timer("INIT")
 
-    likelihood = gpytorch.likelihoods.GaussianLikelihood()
+    likelihood = set_up_likelihood(args.likelihood)
+
     model = VNNGP(
         inducing_points=train_X,
         likelihood=likelihood,
@@ -285,13 +286,13 @@ class VNNGP(ApproximateGP):
         self.mean_module.bias.data = mean_bias
 
         self.covar_module = gpytorch.kernels.ScaleKernel(
-            gpytorch.kernels.MaternKernel(nu=1.5, active_dims=(5, 6), ard=2)
+            gpytorch.kernels.MaternKernel(nu=1.5, active_dims=(5, 6), ard_num_dims=2)
             * (
                 gpytorch.kernels.MaternKernel(nu=0.5, active_dims=(3, 4))
                 + gpytorch.kernels.ConstantKernel()
             )
         ) + gpytorch.kernels.ScaleKernel(
-            gpytorch.kernels.MaternKernel(nu=0.5, active_dims=(5, 6), ard=2)
+            gpytorch.kernels.MaternKernel(nu=0.5, active_dims=(5, 6), ard_num_dims=2)
             * gpytorch.kernels.MaternKernel(nu=1.5, active_dims=2)
         )
 
@@ -399,6 +400,19 @@ def get_all_paths(station_path_list, month="*", year="*"):
     return all_paths
 
 
+def set_up_likelihood(likelihood):
+    """
+    Set up the likelihood for the model
+    """
+
+    if likelihood == "Gaussian":
+        return gpytorch.likelihoods.GaussianLikelihood()
+    elif likelihood == "Student":
+        return gpytorch.likelihoods.StudentTLikelihood()
+    else:
+        raise ValueError(f"Unknown likelihood: {likelihood}")
+
+
 if __name__ == "__main__":
     import argparse
 
@@ -460,6 +474,14 @@ if __name__ == "__main__":
         type=float,
         default=None,
         help="Multiplier for the time feature",
+    )
+
+    parser.add_argument(
+        "--likelihood",
+        type=str,
+        default="Gaussian",
+        choices=["Gaussian", "Student"],
+        help="Likelihood to use",
     )
 
     args = parser.parse_args()
