@@ -216,7 +216,6 @@ def train(model, likelihood, mll, optimizer, train_loader):
         optimizer.zero_grad()
         output = model(x_batch)
         loss = -mll(output, y_batch)
-        minibatch_iter.set_postfix(loss=loss.item())
         loss.backward()
         optimizer.step()
         epoch_loss += loss.item()
