@@ -107,7 +107,7 @@ def main(args):
 
         logger.start_timer("VALIDATE")
         logger.info("Validating the model")
-        val_prob, val_mse = validate(model, likelihood, test_loader)
+        val_mae, val_mse = validate(model, likelihood, test_loader)
         logger.stop_timer("VALIDATE")
         if epoch > 10:
             if val_mse < best_mse:
@@ -120,10 +120,10 @@ def main(args):
         logger.info(
             f"Epoch {epoch + 1}/{args.num_epochs} - "
             f"Train Loss: {train_loss:.3f} - "
-            f"Validation Log Probability: {val_prob:.3f} - "
+            f"Validation MAE: {val_mae:.3f} - "
             f"Validation MSE: {val_mse:.3f}"
         )
-        epoch_losses.append([epoch, train_loss, val_prob, val_mse])
+        epoch_losses.append([epoch, train_loss, val_mae, val_mse])
 
     # Load the state dict
     logger.info("Loading the best model")
@@ -138,7 +138,7 @@ def main(args):
     test_df.to_csv(os.path.join(args.output, "predictions.csv"), index=False)
 
     epoch_losses = pd.DataFrame(
-        epoch_losses, columns=["epoch", "train_loss", "val_prob", "val_mse"]
+        epoch_losses, columns=["epoch", "train_loss", "val_mae", "val_mse"]
     )
     epoch_losses.to_csv(os.path.join(args.output, "epoch_losses.csv"), index=False)
 
@@ -185,7 +185,7 @@ def validate(model, likelihood, test_loader):
 
     model.eval()
     likelihood.eval()
-    log_prob = 0
+    mae = 0
     mse = 0
     count = 0
     with torch.no_grad():
@@ -196,13 +196,19 @@ def validate(model, likelihood, test_loader):
                 y = y.cuda()
 
             preds = likelihood(model(X))
-            log_prob += preds.log_prob(y)
-            mse += torch.sum((preds.mean - y) ** 2)
+
+            mean_preds = preds.mean
+            if mean_preds.dim() == 1:
+                mae += torch.sum(torch.abs(mean_preds - y))
+                mse += torch.sum((mean_preds - y) ** 2)
+            else:
+                mae += torch.sum(torch.abs(mean_preds.mean(axis=0) - y))
+                mse += torch.sum((mean_preds.mean(axis=0) - y) ** 2)
             count += y.size(0)
-    log_prob /= count
+    mae /= count
     mse /= count
 
-    return log_prob.item(), mse.item()
+    return mae.item(), mse.item()
 
 
 def train(model, likelihood, mll, optimizer, train_loader):
