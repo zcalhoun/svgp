@@ -25,7 +25,6 @@ from gpytorch.models import ApproximateGP
 from gpytorch.variational import (
     CholeskyVariationalDistribution,
     VariationalStrategy,
-    NaturalVariationalDistribution,
 )
 import torch
 from torch.utils.data import DataLoader, TensorDataset
@@ -57,7 +56,7 @@ def main(args):
     logger.info("Data loaded")
     logger.info(f"Train data shape: {train_X.shape}")
 
-    mean_weights, mean_bias = init_mean_coefs(train_y)
+    mean_weights = init_mean_coefs(train_y)
 
     logger.start_timer("INIT")
 
@@ -68,11 +67,7 @@ def main(args):
         inducing_points * (train_X.max(0).values - train_X.min(0).values)
         + train_X.min(0).values
     )
-    model = SVGP(
-        inducing_points=inducing_points,
-        mean_weights=mean_weights,
-        mean_bias=mean_bias,
-    )
+    model = SVGP(inducing_points=inducing_points, mean_weights=mean_weights)
 
     logger.stop_timer("INIT")
 
@@ -87,10 +82,6 @@ def main(args):
             {"params": likelihood.parameters()},
         ],
         lr=args.lr,
-    )
-
-    variational_ngd_optimizer = gpytorch.optim.NGD(
-        model.variational_parameters(), num_data=train_y.size(0), lr=args.variational_lr
     )
 
     mll = set_up_loss(args.loss_function, likelihood, model, train_y.size(0))
@@ -111,9 +102,7 @@ def main(args):
 
         logger.start_timer("TRAIN")
         logger.info(f"Epoch {epoch + 1}/{args.num_epochs}")
-        train_loss = train(
-            model, likelihood, mll, optimizer, variational_ngd_optimizer, train_loader
-        )
+        train_loss = train(model, likelihood, mll, optimizer, train_loader)
         logger.stop_timer("TRAIN")
 
         logger.start_timer("VALIDATE")
@@ -216,7 +205,7 @@ def validate(model, likelihood, test_loader):
     return log_prob.item(), mse.item()
 
 
-def train(model, likelihood, mll, optimizer, variational_ngd_optimizer, train_loader):
+def train(model, likelihood, mll, optimizer, train_loader):
     """
     This function runs the train loader to train the model.
     """
@@ -235,7 +224,6 @@ def train(model, likelihood, mll, optimizer, variational_ngd_optimizer, train_lo
         loss = -mll(output, y_batch)
         loss.backward()
         optimizer.step()
-        variational_ngd_optimizer.step()
         epoch_loss += loss.item()
         epoch_count += y_batch.size(0)
 
@@ -254,7 +242,7 @@ def init_mean_coefs(train_y):
     mean[0] = 1.0  # torch.quantile(train_y, torch.tensor([0.02, 0.98])).diff() / 2
     mean[1] = 0.1
 
-    return mean, train_y.mean()
+    return mean
 
 
 class SVGP(ApproximateGP):
@@ -263,17 +251,12 @@ class SVGP(ApproximateGP):
 
     """
 
-    def __init__(
-        self,
-        inducing_points,
-        mean_weights=None,
-        mean_bias=None,
-    ):
+    def __init__(self, inducing_points, mean_weights=None):
         """
         Define the VNNGP model
         """
 
-        variational_distribution = NaturalVariationalDistribution(
+        variational_distribution = CholeskyVariationalDistribution(
             num_inducing_points=inducing_points.size(0)
         )
 
@@ -287,7 +270,7 @@ class SVGP(ApproximateGP):
 
         self.mean_module = gpytorch.means.LinearMean(2)
         self.mean_module.weights.data = mean_weights
-        self.mean_module.bias.data = mean_bias
+        # self.mean_module.bias.data = mean_bias
 
         self.covar_module = gpytorch.kernels.ScaleKernel(
             gpytorch.kernels.MaternKernel(nu=1.5, active_dims=(5, 6), ard_num_dims=2)
