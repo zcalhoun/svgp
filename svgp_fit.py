@@ -141,7 +141,7 @@ def main(args):
 
     epoch_losses = pd.DataFrame(
         epoch_losses,
-        columns=["epoch", "train_loss", "val_mae", "val_mse", "val_nlpd, val_qce"],
+        columns=["epoch", "train_loss", "val_mae", "val_mse", "val_nlpd", "val_qce"],
     )
     epoch_losses.to_csv(os.path.join(args.output, "epoch_losses.csv"), index=False)
 
