@@ -62,6 +62,9 @@ def main(args):
 
     likelihood = set_up_likelihood(args.likelihood)
 
+    inducing_points = initialize_inducing_points(
+        train_X, args.num_inducing_points, method=args.inducing_points_method
+    )
     inducing_points = torch.rand(args.num_inducing_points, 7)
     inducing_points = (
         inducing_points * (train_X.max(0).values - train_X.min(0).values)
@@ -107,7 +110,9 @@ def main(args):
 
         logger.start_timer("VALIDATE")
         logger.info("Validating the model")
-        val_mae, val_mse, val_nlpd, val_qce = validate(model, likelihood, test_loader)
+        val_mae, val_mse, val_nlpd, qce50, qce75, qce95 = validate(
+            model, likelihood, test_loader
+        )
         logger.stop_timer("VALIDATE")
         if epoch > 10:
             if val_mse < best_mse:
@@ -123,9 +128,11 @@ def main(args):
             f"Validation MAE: {val_mae:.3f} - "
             f"Validation MSE: {val_mse:.3f} - "
             f"Validation NLPD: {val_nlpd:.3f} - "
-            f"Validation QCE: {val_qce:.3f}"
+            f"Validation QCE 95: {qce95:.3f}"
         )
-        epoch_losses.append([epoch, train_loss, val_mae, val_mse, val_nlpd, val_qce])
+        epoch_losses.append(
+            [epoch, train_loss, val_mae, val_mse, val_nlpd, qce50, qce75, qce95]
+        )
 
     # Load the state dict
     logger.info("Loading the best model")
@@ -141,7 +148,16 @@ def main(args):
 
     epoch_losses = pd.DataFrame(
         epoch_losses,
-        columns=["epoch", "train_loss", "val_mae", "val_mse", "val_nlpd", "val_qce"],
+        columns=[
+            "epoch",
+            "train_loss",
+            "val_mae",
+            "val_mse",
+            "val_nlpd",
+            "qce50",
+            "qce75",
+            "qce95",
+        ],
     )
     epoch_losses.to_csv(os.path.join(args.output, "epoch_losses.csv"), index=False)
 
@@ -196,7 +212,9 @@ def validate(model, likelihood, test_loader):
     mae = 0
     mse = 0
     nlpd = 0
-    qce = 0
+    qce50 = 0
+    qce75 = 0
+    qce95 = 0
     count = 0
     with torch.no_grad(), gpytorch.settings.num_likelihood_samples(1000):
 
@@ -212,7 +230,18 @@ def validate(model, likelihood, test_loader):
                 mae += torch.sum(torch.abs(mean_preds - y))
                 mse += torch.sum((mean_preds - y) ** 2)
                 nlpd += torch.sum(-preds.log_prob(y))
-                qce += (
+
+                qce50 += (
+                    gpytorch.metrics.quantile_coverage_error(preds, y, 50.0).item()
+                    * y.shape[0]
+                )
+
+                qce75 += (
+                    gpytorch.metrics.quantile_coverage_error(preds, y, 75.0).item()
+                    * y.shape[0]
+                )
+
+                qce95 += (
                     gpytorch.metrics.quantile_coverage_error(preds, y, 95.0).item()
                     * y.shape[0]
                 )
@@ -224,14 +253,18 @@ def validate(model, likelihood, test_loader):
                     -torch.logsumexp(preds.log_prob(y), dim=0) + np.log(S)
                 )
                 samples = preds.sample()
-                qce += qce_coverage(samples, y, alpha=0.95) * y.shape[0]
+                qce50 += qce_coverage(samples, y, alpha=50.0) * y.shape[0]
+                qce75 += qce_coverage(samples, y, alpha=75.0) * y.shape[0]
+                qce95 += qce_coverage(samples, y, alpha=95.0) * y.shape[0]
             count += y.size(0)
     mae /= count
     mse /= count
     nlpd /= count
-    qce /= count
+    qce50 /= count
+    qce75 /= count
+    qce95 /= count
 
-    return mae.item(), mse.item(), nlpd.item(), qce
+    return mae.item(), mse.item(), nlpd.item(), qce50, qce75, qce95
 
 
 def train(model, likelihood, mll, optimizer, train_loader):
@@ -259,6 +292,35 @@ def train(model, likelihood, mll, optimizer, train_loader):
     total_loss = epoch_loss / epoch_count
 
     return total_loss
+
+
+def initialize_inducing_points(train_X, num_inducing_points, method="random"):
+    """
+    This function initializes the inducing points for the model.
+
+    There are two supported methods at this time:
+    1. Randomly sample inducing points completely.
+    2. Randomly sample inducing points from the training data.
+    """
+
+    # For reproducibility...
+    torch.manual_seed(5)
+
+    if method == "random":
+        inducing_points = torch.rand(num_inducing_points, train_X.shape[1])
+        inducing_points = (
+            inducing_points * (train_X.max(0).values - train_X.min(0).values)
+            + train_X.min(0).values
+        )
+    elif method == "random_train":
+        M = 20000
+        inducing_points = train_X[torch.randperm(M)][:num_inducing_points]
+    else:
+        raise NotImplementedError(
+            f"Method {method} not implemented for initializing inducing points."
+        )
+
+    return inducing_points
 
 
 def init_mean_coefs(train_y):
@@ -413,12 +475,12 @@ def qce_coverage(y_samples, y_true, alpha=95.0):
     y_true : torch.Tensor
         Shape (N,) — true labels
     alpha : float
-        Desired coverage level (e.g., 0.9 for 90%)
+        Desired coverage level (e.g., 90. for 90%)
 
     Returns
     -------
-    coverage : float
-        Fraction of test points with y_true inside predictive interval
+    coverage error: float
+        Distance from the desired coverage level
     """
     # Compute quantiles across samples (dim=0 → across S samples per point)
     lower = torch.quantile(y_samples, q=(1 - alpha / 100) / 2, dim=0)
@@ -489,6 +551,14 @@ if __name__ == "__main__":
         type=int,
         default=256,
         help="Batch size for training and testing",
+    )
+
+    parser.add_argument(
+        "--inducing_points_method",
+        type=str,
+        default="random",
+        choices=["random", "random_train"],
+        help="Method to use for initializing inducing points",
     )
 
     # Add a loss function with choices "ELBO" and "PLL"
