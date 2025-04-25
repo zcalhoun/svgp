@@ -139,7 +139,7 @@ def main(args):
     test_df.to_csv(os.path.join(args.output, "predictions.csv"), index=False)
 
     epoch_losses = pd.DataFrame(
-        epoch_losses, columns=["epoch", "train_loss", "val_mae", "val_mse"]
+        epoch_losses, columns=["epoch", "train_loss", "val_mae", "val_mse", "val_nlpd"]
     )
     epoch_losses.to_csv(os.path.join(args.output, "epoch_losses.csv"), index=False)
 
