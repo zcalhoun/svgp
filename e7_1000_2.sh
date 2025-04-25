@@ -15,7 +15,7 @@ source gp/bin/activate
 python svgp_fit.py \
     --data_directory /work/zdc6/weather_underground/durham/combined/ \
     --output /work/zdc6/exp7/1000/2 \
-    --num_epochs 100 \
+    --num_epochs 15 \
     --name e7_1000_2 \
     --year 2023 \
     --month 7 \

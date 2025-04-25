@@ -107,7 +107,7 @@ def main(args):
 
         logger.start_timer("VALIDATE")
         logger.info("Validating the model")
-        val_mae, val_mse = validate(model, likelihood, test_loader)
+        val_mae, val_mse, val_nlpd = validate(model, likelihood, test_loader)
         logger.stop_timer("VALIDATE")
         if epoch > 10:
             if val_mse < best_mse:
@@ -121,9 +121,10 @@ def main(args):
             f"Epoch {epoch + 1}/{args.num_epochs} - "
             f"Train Loss: {train_loss:.3f} - "
             f"Validation MAE: {val_mae:.3f} - "
-            f"Validation MSE: {val_mse:.3f}"
+            f"Validation MSE: {val_mse:.3f} - "
+            f"Validation NLPD: {val_nlpd:.3f}"
         )
-        epoch_losses.append([epoch, train_loss, val_mae, val_mse])
+        epoch_losses.append([epoch, train_loss, val_mae, val_mse, val_nlpd])
 
     # Load the state dict
     logger.info("Loading the best model")
@@ -166,14 +167,19 @@ def predict(model, likelihood, test_loader):
     model.eval()
     likelihood.eval()
     preds = []
-    with torch.no_grad():
+    with torch.no_grad(), gpytorch.settings.num_likelihood_samples(100):
 
         for X, _ in test_loader:
             if torch.cuda.is_available():
                 X = X.cuda()
 
             pred = likelihood(model(X))
-            preds.append(pred.mean.cpu().numpy())
+            pred_mean = pred.mean
+            if pred_mean.dim() == 1:
+                preds.append(pred_mean.cpu().numpy())
+            else:
+                # Handle Student T outputs
+                preds.append(pred_mean.mean(dim=0).cpu().numpy())
 
     return np.concatenate(preds)
 
@@ -187,8 +193,9 @@ def validate(model, likelihood, test_loader):
     likelihood.eval()
     mae = 0
     mse = 0
+    nlpd = 0
     count = 0
-    with torch.no_grad():
+    with torch.no_grad(), gpytorch.settings.num_likelihood_samples(1000):
 
         for X, y in test_loader:
             if torch.cuda.is_available():
@@ -201,14 +208,20 @@ def validate(model, likelihood, test_loader):
             if mean_preds.dim() == 1:
                 mae += torch.sum(torch.abs(mean_preds - y))
                 mse += torch.sum((mean_preds - y) ** 2)
+                nlpd += torch.sum(-preds.log_prob(y))
             else:
                 mae += torch.sum(torch.abs(mean_preds.mean(axis=0) - y))
                 mse += torch.sum((mean_preds.mean(axis=0) - y) ** 2)
+                S, _ = mean_preds.shape
+                nlpd += torch.sum(
+                    -torch.logsumexp(preds.log_prob(y.cuda()), dim=0) + np.log(S)
+                )
             count += y.size(0)
     mae /= count
     mse /= count
+    nlpd /= count
 
-    return mae.item(), mse.item()
+    return mae.item(), mse.item(), nlpd.item()
 
 
 def train(model, likelihood, mll, optimizer, train_loader):
