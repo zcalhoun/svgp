@@ -107,7 +107,7 @@ def main(args):
 
         logger.start_timer("VALIDATE")
         logger.info("Validating the model")
-        val_mae, val_mse, val_nlpd = validate(model, likelihood, test_loader)
+        val_mae, val_mse, val_nlpd, val_qce = validate(model, likelihood, test_loader)
         logger.stop_timer("VALIDATE")
         if epoch > 10:
             if val_mse < best_mse:
@@ -122,9 +122,10 @@ def main(args):
             f"Train Loss: {train_loss:.3f} - "
             f"Validation MAE: {val_mae:.3f} - "
             f"Validation MSE: {val_mse:.3f} - "
-            f"Validation NLPD: {val_nlpd:.3f}"
+            f"Validation NLPD: {val_nlpd:.3f} - "
+            f"Validation QCE: {val_qce:.3f}"
         )
-        epoch_losses.append([epoch, train_loss, val_mae, val_mse, val_nlpd])
+        epoch_losses.append([epoch, train_loss, val_mae, val_mse, val_nlpd, val_qce])
 
     # Load the state dict
     logger.info("Loading the best model")
@@ -139,7 +140,8 @@ def main(args):
     test_df.to_csv(os.path.join(args.output, "predictions.csv"), index=False)
 
     epoch_losses = pd.DataFrame(
-        epoch_losses, columns=["epoch", "train_loss", "val_mae", "val_mse", "val_nlpd"]
+        epoch_losses,
+        columns=["epoch", "train_loss", "val_mae", "val_mse", "val_nlpd, val_qce"],
     )
     epoch_losses.to_csv(os.path.join(args.output, "epoch_losses.csv"), index=False)
 
@@ -194,6 +196,7 @@ def validate(model, likelihood, test_loader):
     mae = 0
     mse = 0
     nlpd = 0
+    qce = 0
     count = 0
     with torch.no_grad(), gpytorch.settings.num_likelihood_samples(1000):
 
@@ -209,19 +212,26 @@ def validate(model, likelihood, test_loader):
                 mae += torch.sum(torch.abs(mean_preds - y))
                 mse += torch.sum((mean_preds - y) ** 2)
                 nlpd += torch.sum(-preds.log_prob(y))
+                qce += (
+                    gpytorch.metrics.quantile_coverage_error(preds, y, 0.95).item()
+                    * y.shape[0]
+                )
             else:
                 mae += torch.sum(torch.abs(mean_preds.mean(axis=0) - y))
                 mse += torch.sum((mean_preds.mean(axis=0) - y) ** 2)
                 S, _ = mean_preds.shape
                 nlpd += torch.sum(
-                    -torch.logsumexp(preds.log_prob(y.cuda()), dim=0) + np.log(S)
+                    -torch.logsumexp(preds.log_prob(y), dim=0) + np.log(S)
                 )
+                samples = preds.sample()
+                qce += qce_coverage(samples, y, alpha=0.95) * y.shape[0]
             count += y.size(0)
     mae /= count
     mse /= count
     nlpd /= count
+    qce /= count
 
-    return mae.item(), mse.item(), nlpd.item()
+    return mae.item(), mse.item(), nlpd.item(), qce
 
 
 def train(model, likelihood, mll, optimizer, train_loader):
@@ -390,6 +400,34 @@ def get_all_paths(station_path_list, month="*", year="*"):
             )
         )
     return all_paths
+
+
+def qce_coverage(y_samples, y_true, alpha=0.9):
+    """
+    Compute empirical coverage of central prediction intervals using PyTorch.
+
+    Parameters
+    ----------
+    y_samples : torch.Tensor
+        Shape (S, N) — predictive samples from the posterior
+    y_true : torch.Tensor
+        Shape (N,) — true labels
+    alpha : float
+        Desired coverage level (e.g., 0.9 for 90%)
+
+    Returns
+    -------
+    coverage : float
+        Fraction of test points with y_true inside predictive interval
+    """
+    # Compute quantiles across samples (dim=0 → across S samples per point)
+    lower = torch.quantile(y_samples, q=(1 - alpha) / 2, dim=0)
+    upper = torch.quantile(y_samples, q=(1 + alpha) / 2, dim=0)
+
+    # Check if true values are inside the intervals
+    inside = (y_true >= lower) & (y_true <= upper)
+
+    return inside.float().mean().item()
 
 
 def set_up_likelihood(likelihood):
