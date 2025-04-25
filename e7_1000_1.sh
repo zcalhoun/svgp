@@ -14,7 +14,7 @@ source gp/bin/activate
 
 python svgp_fit.py \
     --data_directory /work/zdc6/weather_underground/durham/combined/ \
-    --output /work/zdc6/exp7/1000/1/ \
+    --output /work/zdc6/exp7/1000/1b/ \
     --num_epochs 100 \
     --name e7_1000_1 \
     --year 2023 \
@@ -22,4 +22,4 @@ python svgp_fit.py \
     --likelihood Student \
     --num_inducing_points 1000 \
     --batch_size 4096 \
-    --lr 0.1
+    --lr 0.01
