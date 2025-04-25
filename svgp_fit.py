@@ -213,7 +213,7 @@ def validate(model, likelihood, test_loader):
                 mse += torch.sum((mean_preds - y) ** 2)
                 nlpd += torch.sum(-preds.log_prob(y))
                 qce += (
-                    gpytorch.metrics.quantile_coverage_error(preds, y, 0.95).item()
+                    gpytorch.metrics.quantile_coverage_error(preds, y, 95.0).item()
                     * y.shape[0]
                 )
             else:
@@ -402,7 +402,7 @@ def get_all_paths(station_path_list, month="*", year="*"):
     return all_paths
 
 
-def qce_coverage(y_samples, y_true, alpha=0.9):
+def qce_coverage(y_samples, y_true, alpha=95.0):
     """
     Compute empirical coverage of central prediction intervals using PyTorch.
 
@@ -421,13 +421,17 @@ def qce_coverage(y_samples, y_true, alpha=0.9):
         Fraction of test points with y_true inside predictive interval
     """
     # Compute quantiles across samples (dim=0 → across S samples per point)
-    lower = torch.quantile(y_samples, q=(1 - alpha) / 2, dim=0)
-    upper = torch.quantile(y_samples, q=(1 + alpha) / 2, dim=0)
+    lower = torch.quantile(y_samples, q=(1 - alpha / 100) / 2, dim=0)
+    upper = torch.quantile(y_samples, q=(1 + alpha / 100) / 2, dim=0)
 
     # Check if true values are inside the intervals
     inside = (y_true >= lower) & (y_true <= upper)
 
-    return inside.float().mean().item()
+    fraction = inside.float().mean()
+
+    return torch.abs(fraction - alpha / 100).item()
+
+    # return inside.float().mean().item()
 
 
 def set_up_likelihood(likelihood):

@@ -19,6 +19,6 @@ python svgp_fit.py \
     --name e7_5000_4 \
     --year 2023 \
     --month 7 \
-    --num_inducing_points 1000 \
+    --num_inducing_points 5000 \
     --batch_size 4096 \
     --lr 0.1
