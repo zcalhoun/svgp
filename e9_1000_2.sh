@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#SBATCH --job-name=e7_1000_3f
-#SBATCH --output=e7_1000_3f.out
-#SBATCH --error=e7_1000_3f.err
+#SBATCH --job-name=e9_1000_2
+#SBATCH --output=e9_1000_2.out
+#SBATCH --error=e9_1000_2.err
 #SBATCH --mail-user=zachary.calhoun@duke.edu
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH -p carlsonlab-gpu
@@ -14,13 +14,12 @@ source gp/bin/activate
 
 python svgp_fit.py \
     --data_directory /work/zdc6/weather_underground/durham/combined/ \
-    --output /work/zdc6/exp7/1000/3f/ \
+    --output /work/zdc6/exp9/1000/2/ \
     --num_epochs 200 \
-    --name e7_1000_3f \
+    --name e9_1000_2 \
     --year 2023 \
     --month 7 \
-    --likelihood Student \
     --loss_function PLL \
     --num_inducing_points 1000 \
     --batch_size 512 \
-    --lr 0.1
+    --lr 0.01

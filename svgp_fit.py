@@ -231,20 +231,11 @@ def validate(model, likelihood, test_loader):
                 mse += torch.sum((mean_preds - y) ** 2)
                 nlpd += torch.sum(-preds.log_prob(y))
 
-                qce50 += (
-                    gpytorch.metrics.quantile_coverage_error(preds, y, 50.0).item()
-                    * y.shape[0]
-                )
+                qce50 += quantile_coverage_error(preds, y, 50.0).item() * y.shape[0]
 
-                qce75 += (
-                    gpytorch.metrics.quantile_coverage_error(preds, y, 75.0).item()
-                    * y.shape[0]
-                )
+                qce75 += quantile_coverage_error(preds, y, 75.0).item() * y.shape[0]
 
-                qce95 += (
-                    gpytorch.metrics.quantile_coverage_error(preds, y, 95.0).item()
-                    * y.shape[0]
-                )
+                qce95 += quantile_coverage_error(preds, y, 95.0).item() * y.shape[0]
             else:
                 mae += torch.sum(torch.abs(mean_preds.mean(axis=0) - y))
                 mse += torch.sum((mean_preds.mean(axis=0) - y) ** 2)
@@ -253,9 +244,9 @@ def validate(model, likelihood, test_loader):
                     -torch.logsumexp(preds.log_prob(y), dim=0) + np.log(S)
                 )
                 samples = preds.sample()
-                qce50 += qce_coverage(samples, y, alpha=50.0) * y.shape[0]
-                qce75 += qce_coverage(samples, y, alpha=75.0) * y.shape[0]
-                qce95 += qce_coverage(samples, y, alpha=95.0) * y.shape[0]
+                qce50 += t_qce_coverage(samples, y, alpha=50.0) * y.shape[0]
+                qce75 += t_qce_coverage(samples, y, alpha=75.0) * y.shape[0]
+                qce95 += t_qce_coverage(samples, y, alpha=95.0) * y.shape[0]
             count += y.size(0)
     mae /= count
     mse /= count
@@ -464,7 +455,23 @@ def get_all_paths(station_path_list, month="*", year="*"):
     return all_paths
 
 
-def qce_coverage(y_samples, y_true, alpha=95.0):
+def quantile_coverage_error(pred_dist, test_y, quantile):
+    """
+    Quantile coverage error for normal distributions
+    """
+    if quantile <= 0 or quantile >= 100:
+        raise NotImplementedError("Quantile must be between 0 and 100")
+    # combine_dim = -2 if isinstance(pred_dist, MultitaskMultivariateNormal) else -1
+    standard_normal = torch.distributions.Normal(loc=0.0, scale=1.0)
+    deviation = standard_normal.icdf(torch.as_tensor(0.5 + 0.5 * (quantile / 100)))
+    lower = pred_dist.mean - deviation * pred_dist.stddev
+    upper = pred_dist.mean + deviation * pred_dist.stddev
+    n_samples_within_bounds = ((test_y > lower) * (test_y < upper)).sum(-1)
+    fraction = n_samples_within_bounds / test_y.shape[-1]
+    return fraction - quantile / 100
+
+
+def t_qce_coverage(y_samples, y_true, alpha=95.0):
     """
     Compute empirical coverage of central prediction intervals using PyTorch.
 
@@ -491,7 +498,7 @@ def qce_coverage(y_samples, y_true, alpha=95.0):
 
     fraction = inside.float().mean()
 
-    return torch.abs(fraction - alpha / 100).item()
+    return (fraction - alpha / 100).item()
 
     # return inside.float().mean().item()
 
