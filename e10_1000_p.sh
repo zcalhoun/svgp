@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#SBATCH --job-name=e10_base
-#SBATCH --output=e10_base.out
-#SBATCH --error=e10_base.err
+#SBATCH --job-name=e10_p1000
+#SBATCH --output=e10_p1000.out
+#SBATCH --error=e10_p1000.err
 #SBATCH --mail-user=zachary.calhoun@duke.edu
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH -p carlsonlab-gpu
@@ -14,9 +14,11 @@ source gp/bin/activate
 
 python july24_experiments.py \
     --data_directory /work/zdc6/weather_underground/durham/july2024/ \
-    --output /work/zdc6/exp10/test/ \
-    --num_epochs 20 \
-    --name e10_test \
-    --num_inducing_points 500 \
-    --batch_size 1024 \
-    --lr 0.01
+    --output /work/zdc6/exp10/periodic/1000 \
+    --num_epochs 200 \
+    --name e10_p1000 \
+    --num_inducing_points 1000 \
+    --batch_size 512 \
+    --extra_cols evi t_s_avg \
+    --model periodic \
+    --lr 0.1

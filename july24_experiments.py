@@ -23,6 +23,7 @@ from gpytorch.variational import (
 )
 import torch
 from torch.utils.data import DataLoader, TensorDataset
+from torch.optim.lr_scheduler import SequentialLR, LinearLR, CosineAnnealingWarmRestarts
 
 from src.utils import SimpleLogger
 
@@ -82,6 +83,14 @@ def main(args):
         lr=args.lr,
     )
 
+    warmup_scheduler = LinearLR(optimizer, start_factor=0.001, total_iters=200)
+    cosine_scheduler = CosineAnnealingWarmRestarts(
+        optimizer, T_0=100, T_mult=2, eta_min=1e-6
+    )
+    scheduler = SequentialLR(
+        optimizer, schedulers=[warmup_scheduler, cosine_scheduler], milestones=[200]
+    )
+
     mll = set_up_loss(args.loss_function, likelihood, model, train_y.size(0))
 
     # Create the train dataset
@@ -103,7 +112,7 @@ def main(args):
 
         logger.start_timer("TRAIN")
         logger.info(f"Epoch {epoch + 1}/{args.num_epochs}")
-        train_loss = train(model, likelihood, mll, optimizer, train_loader)
+        train_loss = train(model, likelihood, mll, optimizer, train_loader, scheduler)
         logger.stop_timer("TRAIN")
 
         logger.start_timer("VALIDATE")
@@ -303,7 +312,7 @@ def validate(model, likelihood, test_loader):
     return mae.item(), mse.item(), nlpd.item(), qce50, qce75, qce95
 
 
-def train(model, likelihood, mll, optimizer, train_loader):
+def train(model, likelihood, mll, optimizer, train_loader, scheduler):
     """
     This function runs the train loader to train the model.
     """
@@ -324,6 +333,7 @@ def train(model, likelihood, mll, optimizer, train_loader):
         optimizer.step()
         epoch_loss += loss.item()
         epoch_count += y_batch.size(0)
+        scheduler.step()
 
     total_loss = epoch_loss / epoch_count
 
