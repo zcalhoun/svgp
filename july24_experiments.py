@@ -83,13 +83,11 @@ def main(args):
         lr=args.lr,
     )
 
-    warmup_scheduler = LinearLR(optimizer, start_factor=0.001, total_iters=200)
-    cosine_scheduler = CosineAnnealingWarmRestarts(
-        optimizer, T_0=100, T_mult=2, eta_min=1e-6
-    )
-    scheduler = SequentialLR(
-        optimizer, schedulers=[warmup_scheduler, cosine_scheduler], milestones=[200]
-    )
+    # warmup_scheduler = LinearLR(optimizer, start_factor=0.001, total_iters=200)
+    scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=1000, T_mult=2, eta_min=1e-6)
+    # scheduler = SequentialLR(
+    #     optimizer, schedulers=[warmup_scheduler, cosine_scheduler], milestones=[200]
+    # )
 
     mll = set_up_loss(args.loss_function, likelihood, model, train_y.size(0))
 
