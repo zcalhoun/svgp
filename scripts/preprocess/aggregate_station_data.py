@@ -12,11 +12,8 @@ import multiprocessing as mp
 import pandas as pd
 
 COLUMNS = {
-    "main": ["obsTimeUtc", "qcStatus", "lat", "lon"],
-    "metric": [
-        "tempAvg",
-        "dewptAvg",
-    ],
+    "main": ["obsTimeUtc", "qcStatus", "lat", "lon", "solarRadiationHigh"],
+    "metric": ["tempAvg", "dewptAvg", "precipTotal", "windspeedAvg", "windgustAvg"],
 }
 
 
