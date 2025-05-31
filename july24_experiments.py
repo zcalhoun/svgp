@@ -53,7 +53,7 @@ def main(args):
         )
     )
 
-    logging.info(f"Weights shape: {weights.shape}")
+    logger.info(f"Weights shape: {weights.shape}")
 
     logger.info("Data loaded")
     logger.info(f"Train data shape: {train_X.shape}")
