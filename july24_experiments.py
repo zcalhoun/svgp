@@ -53,6 +53,8 @@ def main(args):
         )
     )
 
+    logging.info(f"Weights shape: {weights.shape}")
+
     logger.info("Data loaded")
     logger.info(f"Train data shape: {train_X.shape}")
 
@@ -601,7 +603,7 @@ def initialize_weights(columns):
 
     kde = KernelDensity(kernel="gaussian", bandwidth=0.5).fit(features)
 
-    w = kde.score_samples(columns.values)
+    w = kde.score_samples(columns)
     w = np.exp(w) / np.sum(np.exp(w)) * len(w)
     return w
 
