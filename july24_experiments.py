@@ -114,9 +114,7 @@ def main(args):
 
         logger.start_timer("TRAIN")
         logger.info(f"Epoch {epoch + 1}/{args.num_epochs}")
-        train_loss = train(
-            model, likelihood, mll, optimizer, train_loader, scheduler, weights
-        )
+        train_loss = train(model, likelihood, mll, optimizer, train_loader, scheduler)
         logger.stop_timer("TRAIN")
 
         logger.start_timer("VALIDATE")
@@ -600,6 +598,12 @@ def initialize_weights(columns):
     This is used to improve the initial performance of the model.
     """
     features = np.unique(columns, axis=0)
+
+    mean = features.mean(axis=0)
+    std = features.std(axis=0)
+    features = (features - mean) / std
+
+    columns = (columns - mean) / std
 
     kde = KernelDensity(kernel="gaussian", bandwidth=0.5).fit(features)
 
