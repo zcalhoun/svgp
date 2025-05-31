@@ -15,6 +15,8 @@ import random
 
 import numpy as np
 import pandas as pd
+from sklearn.neighbors import KernelDensity
+
 import gpytorch
 from gpytorch.models import ApproximateGP
 from gpytorch.variational import (
@@ -43,10 +45,12 @@ def main(args):
     if not os.path.exists(args.output):
         os.makedirs(args.output)
 
-    train_X, train_y, test_X, test_y, unc_X, unc_y, test_df, unc_df = load_data(
-        args.data_directory,
-        train_size=args.train_size,
-        extra_cols=args.extra_cols,
+    train_X, train_y, test_X, test_y, unc_X, unc_y, test_df, unc_df, weights = (
+        load_data(
+            args.data_directory,
+            train_size=args.train_size,
+            extra_cols=args.extra_cols,
+        )
     )
 
     logger.info("Data loaded")
@@ -92,11 +96,9 @@ def main(args):
     mll = set_up_loss(args.loss_function, likelihood, model, train_y.size(0))
 
     # Create the train dataset
-    train_dataset = torch.utils.data.TensorDataset(train_X, train_y)
+    train_dataset = TensorDataset(train_X, train_y, torch.from_numpy(weights).float())
     # Create the train dataloader
-    train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=args.batch_size, shuffle=True
-    )
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
 
     test_ds = TensorDataset(test_X, test_y)
     test_loader = DataLoader(test_ds, batch_size=args.batch_size, shuffle=False)
@@ -110,7 +112,9 @@ def main(args):
 
         logger.start_timer("TRAIN")
         logger.info(f"Epoch {epoch + 1}/{args.num_epochs}")
-        train_loss = train(model, likelihood, mll, optimizer, train_loader, scheduler)
+        train_loss = train(
+            model, likelihood, mll, optimizer, train_loader, scheduler, weights
+        )
         logger.stop_timer("TRAIN")
 
         logger.start_timer("VALIDATE")
@@ -214,6 +218,21 @@ def set_up_model(model, inducing_points, mean_weights=None, extra_cols=None):
         raise ValueError(f"Unknown model: {model}")
 
 
+class IWPLL(gpytorch.mlls.PredictiveLogLikelihood):
+    """
+    Importance Weighted Predictive Log Likelihood (IWPLL) for GPyTorch.
+    This class extends the PredictiveLogLikelihood to support importance weighting.
+    """
+
+    def _log_likelihood_term(self, approximate_dist_f, target, weights=None, **kwargs):
+        if weights is not None:
+            return self.likelihood.log_marginal(target, approximate_dist_f) @ weights
+        else:
+            return self.likelihood.log_marginal(
+                target, approximate_dist_f, **kwargs
+            )  # @ weights
+
+
 def set_up_loss(loss_function, likelihood, model, size):
     """
     Set up the loss function for the model
@@ -223,6 +242,8 @@ def set_up_loss(loss_function, likelihood, model, size):
         mll = gpytorch.mlls.VariationalELBO(likelihood, model, num_data=size)
     elif loss_function == "PLL":
         mll = gpytorch.mlls.PredictiveLogLikelihood(likelihood, model, num_data=size)
+    elif loss_function == "IW-PLL":
+        mll = IWPLL(likelihood, model, num_data=size)
     else:
         raise ValueError(f"Unknown loss function: {loss_function}")
 
@@ -321,12 +342,13 @@ def train(model, likelihood, mll, optimizer, train_loader, scheduler):
     epoch_loss = 0
     epoch_count = 0
 
-    for x_batch, y_batch in train_loader:
+    for x_batch, y_batch, w in train_loader:
         x_batch = x_batch.cuda()
         y_batch = y_batch.cuda()
+        w = w.cuda()
         optimizer.zero_grad()
         output = model(x_batch)
-        loss = -mll(output, y_batch)
+        loss = -mll(output, y_batch, weights=w)
         loss.backward()
         optimizer.step()
         epoch_loss += loss.item()
@@ -530,6 +552,7 @@ def load_data(data_directory, train_size=0.8, random_seed=42, extra_cols=None):
     cols = ["t2m"]
     if extra_cols is not None:
         cols.extend(extra_cols)
+        weights = initialize_weights(train_df[extra_cols].values)
 
     cols.extend(["hour", "lat", "lon"])
 
@@ -566,7 +589,21 @@ def load_data(data_directory, train_size=0.8, random_seed=42, extra_cols=None):
             unc_X[:, 1 : 1 + len(extra_cols)] - mu
         ) / std
 
-    return train_X, train_y, test_X, test_y, unc_X, unc_y, test_df, unc_df
+    return train_X, train_y, test_X, test_y, unc_X, unc_y, test_df, unc_df, weights
+
+
+def initialize_weights(columns):
+    """
+    Initialize the weights for the extra columns.
+    This is used to improve the initial performance of the model.
+    """
+    features = np.unique(columns, axis=0)
+
+    kde = KernelDensity(kernel="gaussian", bandwidth=0.5).fit(features)
+
+    w = kde.score_samples(columns.values)
+    w = np.exp(w) / np.sum(np.exp(w)) * len(w)
+    return w
 
 
 def load_dataset(paths):
