@@ -751,7 +751,7 @@ if __name__ == "__main__":
         "--loss_function",
         type=str,
         default="ELBO",
-        choices=["ELBO", "PLL"],
+        choices=["ELBO", "PLL", "IW-PLL"],
         help="Loss function to use",
     )
 
