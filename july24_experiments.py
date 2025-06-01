@@ -128,7 +128,7 @@ def main(args):
         )
 
         logger.stop_timer("VALIDATE")
-        if epoch > 10:
+        if epoch > 2:
             if val_mse < best_mse:
                 best_mse = val_mse
                 torch.save(model.state_dict(), os.path.join(args.output, "model.pt"))
