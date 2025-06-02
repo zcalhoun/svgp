@@ -435,25 +435,26 @@ class SVGP(ApproximateGP):
         self.mean_module.weights.data = mean_weights
         self.mean_module.bias.data = torch.zeros(1)
 
-        hour_dim = 1 + len(extra_cols)
-        covar_dim = [1 + i for i in range(len(extra_cols))]
-        coord_dim = [2 + len(extra_cols), 3 + len(extra_cols)]
+        # hour_dim = 1 + len(extra_cols)
+        # covar_dim = [1 + i for i in range(len(extra_cols))]
+        # coord_dim = [2 + len(extra_cols), 3 + len(extra_cols)]
+        # ['t2m', 'avg', 'evi', 'lat', 'lon', 'sin_hour', 'cos_hour','hour']
         self.covar_module = gpytorch.kernels.ScaleKernel(
             (
-                gpytorch.kernels.PeriodicKernel(active_dims=hour_dim)
+                gpytorch.kernels.MaternKernel(nu=0.5, active_dims=(5, 6))
                 + gpytorch.kernels.ConstantKernel()
             )
             * gpytorch.kernels.MaternKernel(
-                nu=1.5, active_dims=covar_dim, ard_num_dims=len(covar_dim)
+                nu=1.5, active_dims=(1, 2, 3, 4), ard_num_dims=4
             )
         ) + gpytorch.kernels.ScaleKernel(
-            gpytorch.kernels.MaternKernel(nu=0.5, active_dims=coord_dim, ard_num_dims=2)
-            * gpytorch.kernels.MaternKernel(nu=1.5, active_dims=hour_dim)
+            gpytorch.kernels.MaternKernel(nu=0.5, active_dims=(3, 4), ard_num_dims=2)
+            * gpytorch.kernels.MaternKernel(nu=1.5, active_dims=7)
         )
 
-        self.covar_module.kernels[0].base_kernel.kernels[0].kernels[
-            0
-        ].period_length = 24.0
+        # self.covar_module.kernels[0].base_kernel.kernels[0].kernels[
+        #     0
+        # ].period_length = 24.0
 
         self.terms = 1 + len(extra_cols)
 
@@ -549,12 +550,17 @@ def load_data(data_directory, train_size=0.8, random_seed=42, extra_cols=None):
     test_df["hour"] = test_df["hour"].dt.total_seconds() / 3600
     unc_df["hour"] = unc_df["hour"].dt.total_seconds() / 3600
 
+    periodize(train_df)
+    periodize(test_df)
+    periodize(unc_df)
+
     cols = ["t2m"]
     if extra_cols is not None:
         cols.extend(extra_cols)
-        weights = initialize_weights(train_df[extra_cols].values)
 
-    cols.extend(["hour", "lat", "lon"])
+    weights = initialize_weights(train_df[["lon", "lat"]].values)
+
+    cols.extend(["lat", "lon", "sin_hour", "cos_hour", "hour"])
 
     train_X = train_df[cols].values
     train_y = train_df["tempAvg"].values
@@ -592,6 +598,12 @@ def load_data(data_directory, train_size=0.8, random_seed=42, extra_cols=None):
     return train_X, train_y, test_X, test_y, unc_X, unc_y, test_df, unc_df, weights
 
 
+def periodize(df, period=24):
+    """This creates the features needed to periodize the hour of the day."""
+    df["sin_hour"] = np.sin(2 * df["hour"] * np.pi / period)
+    df["cos_hour"] = np.cos(2 * df["hour"] * np.pi / period)
+
+
 def initialize_weights(columns):
     """
     Initialize the weights for the extra columns.
@@ -599,16 +611,17 @@ def initialize_weights(columns):
     """
     features = np.unique(columns, axis=0)
 
-    mean = features.mean(axis=0)
-    std = features.std(axis=0)
-    features = (features - mean) / std
+    # mean = features.mean(axis=0)
+    # std = features.std(axis=0)
+    # features = (features - mean) / std
 
-    columns = (columns - mean) / std
+    # columns = (columns - mean) / std
 
-    kde = KernelDensity(kernel="gaussian", bandwidth=0.5).fit(features)
+    kde = KernelDensity(kernel="exponential", bandwidth=0.01).fit(features)
 
     w = kde.score_samples(columns)
-    w = np.exp(w) / np.sum(np.exp(w)) * len(w)
+    w = 1 / np.exp(w)
+    w = w / np.sum(w) * len(w)
     return w
 
 
