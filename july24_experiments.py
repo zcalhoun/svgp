@@ -618,7 +618,7 @@ def initialize_weights(columns):
 
     # columns = (columns - mean) / std
 
-    kde = KernelDensity(kernel="epanechnikov", bandwidth=0.1).fit(features)
+    kde = KernelDensity(kernel="exponential", bandwidth=0.1).fit(features)
 
     w = kde.score_samples(columns)
     w = 1 / np.exp(w)
