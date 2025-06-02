@@ -621,9 +621,10 @@ def initialize_weights(columns):
     kde = KernelDensity(kernel="epanechnikov", bandwidth=0.1).fit(features)
 
     w = kde.score_samples(columns)
-    # w = 1 / np.exp(w)
-    w = np.exp(w)
+    w = 1 / np.exp(w)
     w = w / np.sum(w) * len(w)
+    w[w > 5] = 5  # Cap the weights to avoid extreme values
+    w = w / np.sum(w) * len(w)  # Normalize the weights
     return w
 
 
