@@ -559,8 +559,8 @@ def load_data(data_directory, train_size=0.8, random_seed=42, extra_cols=None):
     if extra_cols is not None:
         cols.extend(extra_cols)
 
-    weights = initialize_weights(train_df[extra_cols].values)
-
+    # weights = initialize_weights(train_df[extra_cols].values)
+    weights = initialize_weights(train_df[["lon", "lat"]].values)
     cols.extend(["lat", "lon", "sin_hour", "cos_hour", "hour"])
 
     train_X = train_df[cols].values
@@ -612,16 +612,17 @@ def initialize_weights(columns):
     """
     features = np.unique(columns, axis=0)
 
-    mean = features.mean(axis=0)
-    std = features.std(axis=0)
-    features = (features - mean) / std
+    # mean = features.mean(axis=0)
+    # std = features.std(axis=0)
+    # features = (features - mean) / std
 
-    columns = (columns - mean) / std
+    # columns = (columns - mean) / std
 
-    kde = KernelDensity(kernel="epanechnikov", bandwidth=0.5).fit(features)
+    kde = KernelDensity(kernel="epanechnikov", bandwidth=0.1).fit(features)
 
     w = kde.score_samples(columns)
-    w = 1 / np.exp(w)
+    # w = 1 / np.exp(w)
+    w = np.exp(w)
     w = w / np.sum(w) * len(w)
     return w
 
