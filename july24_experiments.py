@@ -25,7 +25,7 @@ from gpytorch.variational import (
 )
 import torch
 from torch.utils.data import DataLoader, TensorDataset
-from torch.optim.lr_scheduler import SequentialLR, LinearLR, CosineAnnealingWarmRestarts
+from torch.optim.lr_scheduler import CosineAnnealingLR
 
 from src.utils import SimpleLogger
 
@@ -90,7 +90,8 @@ def main(args):
     )
 
     # warmup_scheduler = LinearLR(optimizer, start_factor=0.001, total_iters=200)
-    scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=1000, T_mult=2, eta_min=1e-6)
+    t_max = args.num_epochs * (len(train_X) // args.batch_size + 1)
+    scheduler = CosineAnnealingLR(optimizer, t_max)
     # scheduler = SequentialLR(
     #     optimizer, schedulers=[warmup_scheduler, cosine_scheduler], milestones=[200]
     # )
