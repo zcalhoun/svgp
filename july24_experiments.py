@@ -1,11 +1,10 @@
 """
-The purpose of this code is to define a Variational Nearest
-Neighbor Gaussian Process (VNNGP) model, and to experiment with
-using this model on the complete Weather Underground dataset.
+The purpose of this code is to define a Sparse Variational Gaussian Process (SVGP)
+model that can be used to predict the urban heat island effect using
+satellite data, and difference loss functions or likelihoods.
 
-Ideally, the purpose of this experiment is to determine whether
-the VNNGP can provide us with reasonably good estimates of neighborhood
-urban heat island effect.
+I find that a small number of inducing points (1000) is sufficient to model a month's
+worth of data, and the model is quickly trained on a GPU (<5 minutes).
 
 """
 
@@ -170,11 +169,13 @@ def main(args):
     likelihood.load_state_dict(torch.load(os.path.join(args.output, "likelihood.pt")))
 
     # After training, let's get predictions on all of the data
-    preds = predict(model, likelihood, test_loader)
+    preds, variances = predict(model, likelihood, test_loader)
     test_df["preds"] = preds
+    test_df["variances"] = variances
 
-    preds = predict(model, likelihood, unc_loader)
+    preds, variances = predict(model, likelihood, unc_loader)
     unc_df["preds"] = preds
+    unc_df["variances"] = variances
 
     # Save the predictions to a CSV file
     test_df.to_csv(os.path.join(args.output, "val_predictions.csv"), index=False)
@@ -259,6 +260,7 @@ def predict(model, likelihood, test_loader):
     model.eval()
     likelihood.eval()
     preds = []
+    pred_vars = []
     with torch.no_grad(), gpytorch.settings.num_likelihood_samples(100):
 
         for X, _ in test_loader:
@@ -269,11 +271,13 @@ def predict(model, likelihood, test_loader):
             pred_mean = pred.mean
             if pred_mean.dim() == 1:
                 preds.append(pred_mean.cpu().numpy())
+                pred_vars.append(pred.variance.cpu().numpy())
             else:
                 # Handle Student T outputs
                 preds.append(pred_mean.mean(dim=0).cpu().numpy())
+                pred_vars.append(pred.sample().var(axis=0).cpu().numpy())
 
-    return np.concatenate(preds)
+    return np.concatenate(preds), np.concatenate(pred_vars)
 
 
 def validate(model, likelihood, test_loader):
