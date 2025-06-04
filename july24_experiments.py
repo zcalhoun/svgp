@@ -767,7 +767,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--inducing_points_method",
         type=str,
-        default="random",
+        default="random_train",
         choices=["random", "random_train"],
         help="Method to use for initializing inducing points",
     )

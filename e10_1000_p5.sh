@@ -14,7 +14,7 @@ source gp/bin/activate
 
 python july24_experiments.py \
     --data_directory /work/zdc6/weather_underground/durham/july2024/ \
-    --output /work/zdc6/exp10/periodic/1000/5 \
+    --output /work/zdc6/exp10/periodic/1000/5b \
     --num_epochs 10 \
     --name e10_5p \
     --num_inducing_points 1000 \
