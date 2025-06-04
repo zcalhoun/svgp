@@ -52,6 +52,14 @@ def main(args):
         )
     )
 
+    # To potentially remove...
+    mean = train_X.mean(dim=0)
+    std = train_X.std(dim=0)
+
+    train_X = (train_X - mean) / std
+    test_X = (test_X - mean) / std
+    unc_X = (unc_X - mean) / std
+
     logger.info(f"Weights shape: {weights.shape}")
 
     logger.info("Data loaded")
