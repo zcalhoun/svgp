@@ -443,18 +443,18 @@ class SVGP(ApproximateGP):
         # hour_dim = 1 + len(extra_cols)
         # covar_dim = [1 + i for i in range(len(extra_cols))]
         # coord_dim = [2 + len(extra_cols), 3 + len(extra_cols)]
-        # ['t2m', 'avg', 'evi', 'lat', 'lon', 'sin_hour', 'cos_hour','hour']
+        # ['t2m', 'evi', 'lat', 'lon', 'sin_hour', 'cos_hour','hour']
         self.covar_module = gpytorch.kernels.ScaleKernel(
             (
-                gpytorch.kernels.MaternKernel(nu=0.5, active_dims=(5, 6))
+                gpytorch.kernels.MaternKernel(nu=0.5, active_dims=(4, 5))
                 + gpytorch.kernels.ConstantKernel()
             )
             * gpytorch.kernels.MaternKernel(
-                nu=1.5, active_dims=(1, 2, 3, 4), ard_num_dims=4
+                nu=1.5, active_dims=(1, 2, 3), ard_num_dims=3
             )
         ) + gpytorch.kernels.ScaleKernel(
-            gpytorch.kernels.MaternKernel(nu=0.5, active_dims=(3, 4), ard_num_dims=2)
-            * gpytorch.kernels.MaternKernel(nu=1.5, active_dims=7)
+            gpytorch.kernels.MaternKernel(nu=0.5, active_dims=(2, 3), ard_num_dims=2)
+            * gpytorch.kernels.MaternKernel(nu=1.5, active_dims=6)
         )
 
         # self.covar_module.kernels[0].base_kernel.kernels[0].kernels[
