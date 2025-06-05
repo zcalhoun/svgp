@@ -21,6 +21,6 @@ python july24_experiments.py \
     --batch_size 512 \
     --likelihood Student \
     --loss_function PLL \
-    --extra_cols evi t_s_avg \
+    --extra_cols evi \
     --model periodic \
     --lr 0.01
