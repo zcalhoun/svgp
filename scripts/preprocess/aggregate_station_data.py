@@ -13,7 +13,14 @@ import pandas as pd
 
 COLUMNS = {
     "main": ["obsTimeUtc", "qcStatus", "lat", "lon", "solarRadiationHigh"],
-    "metric": ["tempAvg", "dewptAvg", "precipTotal", "windspeedAvg", "windgustAvg"],
+    "metric": [
+        "tempAvg",
+        "dewptAvg",
+        "precipTotal",
+        "precipRate",
+        "windspeedAvg",
+        "windgustAvg",
+    ],
 }
 
 
