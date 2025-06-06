@@ -48,6 +48,8 @@ def main(args):
             "PC2",
             "tempAvg",
             "dewptAvg",
+            "solarRadiationHigh",
+            "precipTotal",
         ]
     ]
 
@@ -72,7 +74,7 @@ def preprocess_wu_data(wu):
     """
     wu = wu[wu["qcStatus"] == 1]
     wu = wu[~wu["tempAvg"].isna()]
-    wu = wu[~wu["dewptAvg"].isna()]
+    # wu = wu[~wu["dewptAvg"].isna()]
     wu["date"] = pd.to_datetime(wu["obsTimeUtc"], utc=True).dt.round("H")
 
     return wu
