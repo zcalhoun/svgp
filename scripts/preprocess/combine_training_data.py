@@ -50,6 +50,8 @@ def main(args):
             "dewptAvg",
             "solarRadiationHigh",
             "precipTotal",
+            "precipRate",
+            "windspeedAvg",
         ]
     ]
 
