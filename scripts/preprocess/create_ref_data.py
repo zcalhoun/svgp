@@ -50,7 +50,7 @@ def main(args):
         right_on=["year", "lat", "lon"],
     )
 
-    merged = merged.drop(columns=["lat", "lon", "valid_time", "obs_time"])
+    merged = merged.drop(columns=["lat", "lon", "obs_time"])
 
     merged["t2m"] = merged["t2m"] - 273.15  # Convert from Kelvin to Celsius
     merged["d2m"] = merged["d2m"] - 273.15  # Convert from Kelvin to Celsius

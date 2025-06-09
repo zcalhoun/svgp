@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name=create_ref_data
-#SBATCH --array=0         # Adjust this based on number of files - 1
+#SBATCH --array=0-71         # Adjust this based on number of files - 1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --mail-user=zachary.calhoun@duke.edu
