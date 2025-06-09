@@ -30,7 +30,11 @@ def main(args):
     year, month = parse_task_id(task_id)
     logger.info(f"Running task {task_id} for year {year} and month {month}")
     train_X, train_y, test_X, test_y = load_dataset(
-        args.input, variable=args.variable, train_size=args.train_size, year=year, month=month
+        args.input,
+        variable=args.variable,
+        train_size=args.train_size,
+        year=year,
+        month=month,
     )
 
     inducing_points = init_inducing_points(
@@ -54,9 +58,7 @@ def main(args):
         model = model.cuda()
         likelihood = likelihood.cuda()
 
-    train_model(
-        model, likelihood, loss, train_loader, args.num_epochs, args.lr
-    )
+    train_model(model, likelihood, loss, train_loader, args.num_epochs, args.lr)
 
     if args.train_size < 1.0:
         test_ds = TensorDataset(test_X, test_y)
@@ -76,9 +78,7 @@ def main(args):
     # Results is a dictionary with the results. Let's save the results.
     if os.path.exists(args.output) is False:
         os.makedirs(args.output)
-    with open(
-        os.path.join(args.output, f"results_{year}_{month}.json"), "w"
-    ) as f:
+    with open(os.path.join(args.output, f"results_{year}_{month}.json"), "w") as f:
         json.dump(results, f)
 
     # else:
@@ -93,6 +93,7 @@ def main(args):
     #         month=month,
     #     )
 
+
 def parse_task_id(task_id):
     """
     Parse the task ID to extract the year and month.
@@ -103,18 +104,18 @@ def parse_task_id(task_id):
     """
     if task_id is None:
         raise ValueError("SLURM_ARRAY_TASK_ID environment variable is not set.")
-    
+
     # Get list of years and months
     years = list(range(2019, 2025))
     months = list(range(1, 13))
     task_id = int(task_id)
 
-   if task_id < 0 or task_id >= len(years) * len(months):
-       raise ValueError(f"Invalid SLURM_ARRAY_TASK_ID: {task_id}")
+    if task_id < 0 or task_id >= len(years) * len(months):
+        raise ValueError(f"Invalid SLURM_ARRAY_TASK_ID: {task_id}")
 
-   year = years[task_id // len(months)]
-   month = months[task_id % len(months)]
-   return year, month
+    year = years[task_id // len(months)]
+    month = months[task_id % len(months)]
+    return year, month
 
 
 if __name__ == "__main__":
