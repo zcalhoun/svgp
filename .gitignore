@@ -1,3 +1,5 @@
+gp/
+logs/
 /data/*
 /output/*
 /notebooks/*
