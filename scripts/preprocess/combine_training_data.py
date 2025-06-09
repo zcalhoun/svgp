@@ -27,8 +27,13 @@ def main(args):
     print("Merging the data.", flush=True)
     df = wu.merge(era, left_on=["station", "date"], right_on=["stationId", "obs_time"])
 
-    df["year"] = df["date"].dt.year
-    df["month"] = df["date"].dt.month
+    # Add column for time in EST
+    df["local_date"] = (
+        df["date"].dt.tz_localize("UTC").dt.tz_convert("America/New_York")
+    )
+
+    df["year"] = df["local_date"].dt.year
+    df["month"] = df["local_date"].dt.month
 
     print("Lastly, merging the NLCD data.", flush=True)
     df = df.merge(nlcd, left_on=["station", "year"], right_on=["stationId", "year"])
