@@ -72,10 +72,10 @@ def validate_model(model, likelihood, test_loader):
         "mae": mae.item(),
         "mse": mse.item(),
         "nlpd": nlpd.item(),
-        "qce50": qce50.item(),
-        "qce75": qce75.item(),
-        "qce90": qce90.item(),
-        "qce95": qce95.item(),
+        "qce50": qce50,
+        "qce75": qce75,
+        "qce90": qce90,
+        "qce95": qce95,
     }
 
 
