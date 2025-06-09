@@ -45,7 +45,7 @@ def main(args):
     model = load_model(args.variable, inducing_points)
     likelihood = load_likelihood(args.likelihood)
 
-    loss = set_up_loss(args.loss, model, likelihood, train_y.size(0))
+    loss = set_up_loss(args.loss, likelihood, model, train_y.size(0))
 
     train_ds = TensorDataset(train_X, train_y)
     train_loader = DataLoader(
