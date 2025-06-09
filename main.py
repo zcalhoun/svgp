@@ -26,7 +26,7 @@ def main(args):
 
     task_id = os.getenv("SLURM_ARRAY_TASK_ID")
     logger = SimpleLogger(task_id)
-
+    logger.info(args)
     year, month = parse_task_id(task_id)
     logger.info(f"Running task {task_id} for year {year} and month {month}")
     train_X, train_y, test_X, test_y = load_dataset(

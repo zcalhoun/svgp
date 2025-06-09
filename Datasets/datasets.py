@@ -40,7 +40,7 @@ def load_data(
 
     set_up_hours(train_df, test_df)
 
-    if variable is "tempAvg":
+    if variable == "tempAvg":
         train_X = train_df[
             ["t2m", "PC1", "lat", "lon", "sin_hour", "cos_hour", "hour"]
         ].values
