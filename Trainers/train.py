@@ -7,7 +7,7 @@ import torch
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
 
-def train_model(model, likelihood, loss, train_loader, num_epochs, lr):
+def train_model(model, likelihood, mll, train_loader, num_epochs, lr):
     """
     The main training function.
     """
@@ -34,7 +34,7 @@ def train_model(model, likelihood, loss, train_loader, num_epochs, lr):
 
             optimizer.zero_grad()
             output = model(x_batch)
-            loss = -loss(output, y_batch)
+            loss = -mll(output, y_batch)
             loss.backward()
             optimizer.step()
             scheduler.step()

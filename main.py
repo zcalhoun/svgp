@@ -45,7 +45,7 @@ def main(args):
     model = load_model(args.variable, inducing_points)
     likelihood = load_likelihood(args.likelihood)
 
-    loss = set_up_loss(args.loss, likelihood, model, train_y.size(0))
+    mll = set_up_mll(args.loss, likelihood, model, train_y.size(0))
 
     train_ds = TensorDataset(train_X, train_y)
     train_loader = DataLoader(
@@ -58,7 +58,8 @@ def main(args):
         model = model.cuda()
         likelihood = likelihood.cuda()
 
-    train_model(model, likelihood, loss, train_loader, args.num_epochs, args.lr)
+    logger.info("Starting training...")
+    train_model(model, likelihood, mll, train_loader, args.num_epochs, args.lr)
 
     if args.train_size < 1.0:
         test_ds = TensorDataset(test_X, test_y)
@@ -73,12 +74,16 @@ def main(args):
             batch_size=args.batch_size,
             shuffle=False,
         )
-        results = validate_model(model, likelihood, test_loader)
+    # Validate the model on the test set
+    logger.info("Validating the model on the test set...")
+    results = validate_model(model, likelihood, test_loader)
 
     # Results is a dictionary with the results. Let's save the results.
-    if os.path.exists(args.output) is False:
+    if os.path.exists(args.output, encoding="utf-8") is False:
         os.makedirs(args.output)
-    with open(os.path.join(args.output, f"results_{year}_{month}.json"), "w") as f:
+    with open(
+        os.path.join(args.output, f"results_{year}_{month}.json"), "w", encoding="utf-8"
+    ) as f:
         json.dump(results, f)
 
     # else:
