@@ -79,7 +79,7 @@ def main(args):
     results = validate_model(model, likelihood, test_loader)
 
     # Results is a dictionary with the results. Let's save the results.
-    if os.path.exists(args.output, encoding="utf-8") is False:
+    if os.path.exists(args.output) is False:
         os.makedirs(args.output)
     with open(
         os.path.join(args.output, f"results_{year}_{month}.json"), "w", encoding="utf-8"
