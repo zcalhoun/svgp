@@ -66,6 +66,7 @@ def validate_model(model, likelihood, test_loader):
     nlpd /= count
     qce50 /= count
     qce75 /= count
+    qce90 /= count
     qce95 /= count
 
     return {

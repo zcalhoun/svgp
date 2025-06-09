@@ -68,14 +68,16 @@ def main(args):
             batch_size=args.batch_size,
             shuffle=False,
         )
+        # Validate the model on the test set
+        logger.info("Validating the model on the test set...")
     else:
+        logger.info("Producing validation on the training set...")
         test_loader = DataLoader(
             train_ds,
             batch_size=args.batch_size,
             shuffle=False,
         )
-    # Validate the model on the test set
-    logger.info("Validating the model on the test set...")
+
     results = validate_model(model, likelihood, test_loader)
 
     # Results is a dictionary with the results. Let's save the results.
