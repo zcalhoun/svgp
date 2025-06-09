@@ -7,7 +7,7 @@
 #SBATCH -p scavenger-gpu
 #SBATCH --gres=gpu:1
 #SBATCH --mem=64G
-#SBATCH --output=./logs/output_%A_%a.txt
+#SBATCH --output=./logs/output_%a.txt
 
 
 source gp/bin/activate
@@ -15,4 +15,7 @@ source gp/bin/activate
 python main.py \
     -i /work/zdc6/weather_underground/durham/combined/ \
     -o /work/zdc6/test_main/ \
-    --num_epochs 2
+    --num_epochs 2 \
+    --variable tempAvg \
+    --likelihood Student \
+    --loss PLL
