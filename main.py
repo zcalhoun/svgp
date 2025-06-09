@@ -28,7 +28,7 @@ def main(args):
     year, month = parse_task_id(task_id)
     logger.info(f"Running task {task_id} for year {year} and month {month}")
     train_X, train_y, test_X, test_y = load_dataset(
-        args.input, variable=args.variable, train_size=args.train_size
+        args.input, variable=args.variable, train_size=args.train_size, year=year, month=month
     )
 
     inducing_points = init_inducing_points(

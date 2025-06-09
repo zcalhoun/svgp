@@ -5,6 +5,8 @@ This file contains useful utility functions for the project.
 
 from datetime import datetime
 
+import torch
+
 
 class SimpleLogger:
     """
@@ -49,3 +51,35 @@ class SimpleLogger:
         elapsed_time /= 60
         elapsed_time = round(elapsed_time, 2)
         self.log(f"{timer_name}: Timer stopped. Elapsed time: {elapsed_time} minutes.")
+
+
+def init_inducing_points(train_X, num_inducing_points):
+    """
+    This function initializes the inducing points for the model by randomly
+    selecting points from the training data.
+    """
+
+    # For reproducibility...
+    torch.manual_seed(5)
+
+    M = 20000
+    inducing_points = train_X[torch.randperm(M)][:num_inducing_points]
+
+    return inducing_points
+
+
+def set_up_loss(loss_function, likelihood, model, size):
+    """
+    Set up the loss function for the model
+    """
+
+    if loss_function == "ELBO":
+        mll = gpytorch.mlls.VariationalELBO(likelihood, model, num_data=size)
+    elif loss_function == "PLL":
+        mll = gpytorch.mlls.PredictiveLogLikelihood(likelihood, model, num_data=size)
+    elif loss_function == "IW-PLL":
+        mll = IWPLL(likelihood, model, num_data=size)
+    else:
+        raise ValueError(f"Unknown loss function: {loss_function}")
+
+    return mll

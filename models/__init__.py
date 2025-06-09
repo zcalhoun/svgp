@@ -1,29 +1,28 @@
 """
-This init function is responsible for loading the correct model based on the model_name argument.
+This script takes care of loading the models and likelihoods.
 """
 
-from .vnngp import (
-    PeriodicSpatial_VNNGP,
-    BaseVNNGP,
-    BaseVNNGP_PeriodicFeatures,
-    BaseVNNGP_PeriodicFeatures_Covariates,
-    BaseVNNGP_PeriodicFeatures_time,
-)
-
-from .deep_ps_gp import *
+from gpytorch.likelihoods import GaussianLikelihood, StudentTLikelihood
+from .temperature import TempModel
 
 
-def load(model_name, *args, **kwargs):
-    """Handles loading the necessary model."""
-    if model_name == "Periodic_VNNGP":
-        return PeriodicSpatial_VNNGP(*args, **kwargs)
-    if model_name == "BaseVNNGP":
-        return BaseVNNGP(*args, **kwargs)
-    if model_name == "BaseVNNGP_PeriodicFeatures":
-        return BaseVNNGP_PeriodicFeatures(*args, **kwargs)
-    if model_name == "BaseVNNGP_PeriodicFeatures_time":
-        return BaseVNNGP_PeriodicFeatures_time(*args, **kwargs)
-    if model_name == "BaseVNNGP_PeriodicFeatures_Covariates":
-        return BaseVNNGP_PeriodicFeatures_Covariates(*args, **kwargs)
+def load_model(variable, inducing_points):
+    """
+    Loads the model based on the variable and inducing points.
+    """
+    if variable == "tempAvg":
+        return TempModel(inducing_points)
+    else:
+        raise ValueError(f"Unsupported variable: {variable}. Please use 'tempAvg'.")
 
-    raise ValueError(f"Model {model_name} not found")
+
+def load_likelihood(likelihood):
+    """
+    Set up the likelihood for the model
+    """
+    if likelihood == "Gaussian":
+        return GaussianLikelihood()
+    elif likelihood == "Student":
+        return StudentTLikelihood()
+    else:
+        raise ValueError(f"Unknown likelihood: {likelihood}")
