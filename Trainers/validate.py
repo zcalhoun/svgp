@@ -49,7 +49,7 @@ def validate_model(model, likelihood, test_loader):
                 mse += torch.sum((mean_preds.mean(axis=0) - y) ** 2)
                 S, _ = mean_preds.shape
                 nlpd += torch.sum(
-                    -torch.logsumexp(preds.log_prob(y), dim=0) + np.log(S)
+                    -torch.logsumexp(preds.log_prob(y), dim=0) + torch.log(S)
                 )
                 samples = preds.sample()
                 qce50 += t_qce_coverage(samples, y, alpha=50.0) * y.shape[0]
