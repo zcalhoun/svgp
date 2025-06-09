@@ -6,6 +6,7 @@ This file contains useful utility functions for the project.
 from datetime import datetime
 
 import torch
+from gpytorch.mlls import VariationalELBO, PredictiveLogLikelihood
 
 
 class SimpleLogger:
@@ -74,11 +75,9 @@ def set_up_loss(loss_function, likelihood, model, size):
     """
 
     if loss_function == "ELBO":
-        mll = gpytorch.mlls.VariationalELBO(likelihood, model, num_data=size)
+        mll = VariationalELBO(likelihood, model, num_data=size)
     elif loss_function == "PLL":
-        mll = gpytorch.mlls.PredictiveLogLikelihood(likelihood, model, num_data=size)
-    elif loss_function == "IW-PLL":
-        mll = IWPLL(likelihood, model, num_data=size)
+        mll = PredictiveLogLikelihood(likelihood, model, num_data=size)
     else:
         raise ValueError(f"Unknown loss function: {loss_function}")
 

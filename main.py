@@ -10,13 +10,15 @@ Date: June 2025
 """
 
 import os
+import json
 import argparse
 
+import torch
 from torch.utils.data import DataLoader, TensorDataset
 
 from Datasets import load_dataset
 from Models import load_model, load_likelihood
-from Trainers import train
+from Trainers import train_model, validate_model
 from src.utils import SimpleLogger, init_inducing_points, set_up_loss
 
 
@@ -48,7 +50,11 @@ def main(args):
         shuffle=True,
     )
 
-    train_results = train(
+    if torch.cuda.is_available():
+        model = model.cuda()
+        likelihood = likelihood.cuda()
+
+    train_model(
         model, likelihood, loss, train_loader, args.num_epochs, args.lr
     )
 
@@ -59,18 +65,33 @@ def main(args):
             batch_size=args.batch_size,
             shuffle=False,
         )
-        results = validate(model, likelihood, test_loader)
     else:
-        """If we train with all of the data, we want to create
-        the final maps from the model."""
-        generate_maps(
-            model,
-            likelihood,
-            var=args.variable,
-            output=args.output,
-            year=year,
-            month=month,
+        test_loader = DataLoader(
+            train_ds,
+            batch_size=args.batch_size,
+            shuffle=False,
         )
+        results = validate_model(model, likelihood, test_loader)
+
+    # Results is a dictionary with the results. Let's save the results.
+    if os.path.exists(args.output) is False:
+        os.makedirs(args.output)
+    with open(
+        os.path.join(args.output, f"results_{year}_{month}.json"), "w"
+    ) as f:
+        json.dump(results, f)
+
+    # else:
+    #     """If we train with all of the data, we want to create
+    #     the final maps from the model."""
+    #     generate_maps(
+    #         model,
+    #         likelihood,
+    #         var=args.variable,
+    #         output=args.output,
+    #         year=year,
+    #         month=month,
+    #     )
 
 def parse_task_id(task_id):
     """
