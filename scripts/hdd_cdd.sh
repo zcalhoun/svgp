@@ -13,4 +13,4 @@ conda activate era
 
 python calc_hdd_cdd.py \
     --ref_data ref_data = "/work/zdc6/temp_preds/" \
-    --wu_file /work/zdc6/weather_underground/durham/ 
+    --output /work/zdc6/weather_underground/durham/ 
