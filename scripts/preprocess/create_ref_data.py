@@ -32,13 +32,9 @@ def main(args):
 
     ds_interp = ds.interp(latitude=new_lat, longitude=new_lon, method="linear")
 
-    ds_interp["obs_time"] = pd.to_datetime(ds_interp["valid_time"], utc=True)
+    df = ds_interp.to_dataframe().reset_index().dropna()
 
-    df = (
-        ds_interp.to_dataframe()
-        .reset_index()
-        .dropna()[["obs_time", "latitude", "longitude", "t2m", "d2m", "u10", "v10"]]
-    )
+    df["obs_time"] = pd.to_datetime(df["valid_time"], utc=True)
 
     pc_map = pd.read_csv(args.nlcd)
     pc_map = pc_map[pc_map["year"] == year]
