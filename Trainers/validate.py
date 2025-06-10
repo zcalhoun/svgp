@@ -24,7 +24,7 @@ def generate_maps(model, likelihood, test_loader):
     lower90 = []
     with torch.no_grad(), gpytorch.settings.num_likelihood_samples(1000):
 
-        for X in test_loader:
+        for (X,) in test_loader:
             if torch.cuda.is_available():
                 X = X.cuda()
 
