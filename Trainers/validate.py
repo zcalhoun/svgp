@@ -3,8 +3,49 @@ This code contains the validation logic for a Gaussian Process model.
 
 """
 
+import numpy as np
 import torch
 import gpytorch
+
+
+def generate_maps(model, likelihood, test_loader):
+    """
+    This model assumes that we care most about generating maps of the mean
+    predictions with lower and upper bounds.
+    """
+
+    model.eval()
+    likelihood.eval()
+
+    mean_preds = []
+    upper95 = []
+    lower95 = []
+    upper90 = []
+    lower90 = []
+    with torch.no_grad(), gpytorch.settings.num_likelihood_samples(1000):
+
+        for X, y in test_loader:
+            if torch.cuda.is_available():
+                X = X.cuda()
+                y = y.cuda()
+
+            preds = likelihood(model(X))
+
+            mean_preds.extend(preds.mean.mean(dim=0).cpu().numpy())
+
+            sample = preds.sample()
+            upper95.extend(torch.quantile(sample, 0.975, dim=0).cpu().numpy())
+            lower95.extend(torch.quantile(sample, 0.025, dim=0).cpu().numpy())
+            upper90.extend(torch.quantile(sample, 0.95, dim=0).cpu().numpy())
+            lower90.extend(torch.quantile(sample, 0.05, dim=0).cpu().numpy())
+
+    return {
+        "pred": np.array(mean_preds),
+        "upper95": np.array(upper95),
+        "lower95": np.array(lower95),
+        "upper90": np.array(upper90),
+        "lower90": np.array(lower90),
+    }
 
 
 def validate_model(model, likelihood, test_loader):

@@ -18,24 +18,30 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from Datasets import load_dataset
 from Models import load_model, load_likelihood
-from Trainers import train_model, validate_model
+from Trainers import train_model, validate_model, generate_maps
 from src.utils import SimpleLogger, init_inducing_points, set_up_loss
 
 
 def main(args):
+    """
+    Main function to run the training and validation process.
+    """
 
     task_id = os.getenv("SLURM_ARRAY_TASK_ID")
     logger = SimpleLogger(task_id)
     logger.info(args)
     year, month = parse_task_id(task_id)
     logger.info(f"Running task {task_id} for year {year} and month {month}")
-    train_X, train_y, test_X, test_y = load_dataset(
+    train_X, train_y, test_X, test_y, test_df = load_dataset(
         args.input,
         variable=args.variable,
         train_size=args.train_size,
         year=year,
         month=month,
+        ref_data=args.ref_data,
     )
+
+    logger.info(f"Loaded test_df with {len(test_df)} rows.")
 
     inducing_points = init_inducing_points(
         train_X,
@@ -61,44 +67,40 @@ def main(args):
     logger.info("Starting training...")
     train_model(model, likelihood, mll, train_loader, args.num_epochs, args.lr)
 
-    if args.train_size < 1.0:
-        test_ds = TensorDataset(test_X, test_y)
-        test_loader = DataLoader(
-            test_ds,
-            batch_size=args.batch_size,
-            shuffle=False,
-        )
-        # Validate the model on the test set
-        logger.info("Validating the model on the test set...")
-    else:
-        logger.info("Producing validation on the training set...")
-        test_loader = DataLoader(
-            train_ds,
-            batch_size=args.batch_size,
-            shuffle=False,
-        )
+    test_ds = TensorDataset(test_X, test_y)
+    test_loader = DataLoader(
+        test_ds,
+        batch_size=args.batch_size,
+        shuffle=False,
+    )
 
-    results = validate_model(model, likelihood, test_loader)
-
-    # Results is a dictionary with the results. Let's save the results.
+    # Save the results to a JSON file.
     if os.path.exists(args.output) is False:
         os.makedirs(args.output)
-    with open(
-        os.path.join(args.output, f"results_{year}_{month}.json"), "w", encoding="utf-8"
-    ) as f:
-        json.dump(results, f)
 
-    # else:
-    #     """If we train with all of the data, we want to create
-    #     the final maps from the model."""
-    #     generate_maps(
-    #         model,
-    #         likelihood,
-    #         var=args.variable,
-    #         output=args.output,
-    #         year=year,
-    #         month=month,
-    #     )
+    # Validate the model on the test set
+    if args.train_size < 1.0:
+        logger.info("Training completed. Now validating the model on the test set...")
+        results = validate_model(model, likelihood, test_loader)
+
+        with open(
+            os.path.join(args.output, f"results_{year}_{month}.json"),
+            "w",
+            encoding="utf-8",
+        ) as f:
+            json.dump(results, f)
+    else:
+        # If the training size is 1.0, we assume that we are saving the results.
+        results = generate_maps(model, likelihood, test_loader)
+
+        test_df["pred"] = results["pred"]
+        test_df["lower95"] = results["lower95"]
+        test_df["upper95"] = results["upper95"]
+        test_df["lower90"] = results["lower90"]
+        test_df["upper90"] = results["upper90"]
+
+        output_file = os.path.join(args.output, f"{year}-{month}.csv")
+        test_df.to_csv(output_file, index=False)
 
 
 def parse_task_id(task_id):
@@ -193,6 +195,13 @@ if __name__ == "__main__":
         type=float,
         default=0.01,
         help="The learning rate to use for the model (default: 0.01)",
+    )
+
+    parser.add_argument(
+        "--ref_data",
+        help="The path to the reference data file (default: None)",
+        type=str,
+        default=None,
     )
 
     arguments = parser.parse_args()

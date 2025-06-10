@@ -18,6 +18,7 @@ def load_data(
     variable=None,
     month=None,
     year=None,
+    ref_data=None,
 ):
     """
     This is the generic code for loading the data for the training/validation
@@ -28,15 +29,24 @@ def load_data(
     all_stations = glob.glob(os.path.join(root_dir, "station=*"))
     random.shuffle(all_stations)
 
-    split_index = int(len(all_stations) * train_size)
-    train_stations = all_stations[:split_index]
-    test_stations = all_stations[split_index:]
+    if train_size != 1.0:
+        split_index = int(len(all_stations) * train_size)
+        train_stations = all_stations[:split_index]
+        test_stations = all_stations[split_index:]
 
-    train_paths = get_all_paths(train_stations, month=month, year=year)
-    test_paths = get_all_paths(test_stations, month=month, year=year)
+        train_paths = get_all_paths(train_stations, month=month, year=year)
+        test_paths = get_all_paths(test_stations, month=month, year=year)
 
-    train_df = load_dataframes(train_paths)
-    test_df = load_dataframes(test_paths)
+        train_df = load_dataframes(train_paths)
+        test_df = load_dataframes(test_paths)
+    else:
+        train_paths = get_all_paths(all_stations, month=month, year=year)
+        train_df = load_dataframes(train_paths)
+
+        if month < 10:
+            month = f"0{month}"
+        test_df = pd.read_csv(os.path.join(ref_data, f"{year}-{month}.csv"))
+        test_df["date"] = pd.to_datetime(test_df["obs_time"], utc=True)
 
     set_up_hours(train_df, test_df)
 
@@ -63,7 +73,7 @@ def load_data(
     test_X = torch.tensor(test_X, dtype=torch.float32)
     test_y = torch.tensor(test_y, dtype=torch.float32)
 
-    return train_X, train_y, test_X, test_y
+    return train_X, train_y, test_X, test_y, test_df
 
 
 def set_up_hours(train_df, test_df):

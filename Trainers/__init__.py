@@ -1,2 +1,2 @@
 from .train import train_model
-from .validate import validate_model
+from .validate import validate_model, generate_maps
