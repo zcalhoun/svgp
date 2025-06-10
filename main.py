@@ -67,13 +67,6 @@ def main(args):
     logger.info("Starting training...")
     train_model(model, likelihood, mll, train_loader, args.num_epochs, args.lr)
 
-    test_ds = TensorDataset(test_X, test_y)
-    test_loader = DataLoader(
-        test_ds,
-        batch_size=args.batch_size,
-        shuffle=False,
-    )
-
     # Save the results to a JSON file.
     if os.path.exists(args.output) is False:
         os.makedirs(args.output)
@@ -81,6 +74,12 @@ def main(args):
     # Validate the model on the test set
     if args.train_size < 1.0:
         logger.info("Training completed. Now validating the model on the test set...")
+        test_ds = TensorDataset(test_X, test_y)
+        test_loader = DataLoader(
+            test_ds,
+            batch_size=args.batch_size,
+            shuffle=False,
+        )
         results = validate_model(model, likelihood, test_loader)
 
         with open(
@@ -91,6 +90,13 @@ def main(args):
             json.dump(results, f)
     else:
         # If the training size is 1.0, we assume that we are saving the results.
+        test_ds = TensorDataset(test_X)
+        test_loader = DataLoader(
+            test_ds,
+            batch_size=args.batch_size,
+            shuffle=False,
+        )
+
         results = generate_maps(model, likelihood, test_loader)
 
         test_df["pred"] = results["pred"]

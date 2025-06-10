@@ -58,7 +58,8 @@ def load_data(
         test_X = test_df[
             ["t2m", "PC1", "lat", "lon", "sin_hour", "cos_hour", "hour"]
         ].values
-        test_y = test_df["tempAvg"].values
+        if train_size != 1.0:
+            test_y = test_df["tempAvg"].values
 
         mean = train_X[:, 1].mean(axis=0)
         std = train_X[:, 1].std(axis=0)
@@ -71,7 +72,10 @@ def load_data(
     train_X = torch.tensor(train_X, dtype=torch.float32)
     train_y = torch.tensor(train_y, dtype=torch.float32)
     test_X = torch.tensor(test_X, dtype=torch.float32)
-    test_y = torch.tensor(test_y, dtype=torch.float32)
+    if train_size != 1.0:
+        test_y = torch.tensor(test_y, dtype=torch.float32)
+    else:
+        test_y = None
 
     return train_X, train_y, test_X, test_y, test_df
 
