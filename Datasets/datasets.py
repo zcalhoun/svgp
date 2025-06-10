@@ -1,196 +1,129 @@
+"""
+This script contains the main logic for loading the datasets.
+"""
+
 import os
-import rasterio as rio
-from numpy import ma
+import glob
+import random
+
 import numpy as np
-from typing import Type, Tuple
-from copy import deepcopy
+import pandas as pd
+import torch
 
 
-class Dataset:
-    def __init__(self, data) -> None:
-        self.data = data
+def load_data(
+    root_dir,
+    train_size=0.8,
+    random_seed=42,
+    variable=None,
+    month=None,
+    year=None,
+    ref_data=None,
+):
+    """
+    This is the generic code for loading the data for the training/validation
+    pipeline.
+    """
 
-    def __len__(self):
-        return len(self.data)
+    random.seed(random_seed)
+    all_stations = glob.glob(os.path.join(root_dir, "station=*"))
+    random.shuffle(all_stations)
 
-    def __getitem__(self, idx):
-        return self.data[idx]
+    if train_size != 1.0:
+        split_index = int(len(all_stations) * train_size)
+        train_stations = all_stations[:split_index]
+        test_stations = all_stations[split_index:]
 
+        train_paths = get_all_paths(train_stations, month=month, year=year)
+        test_paths = get_all_paths(test_stations, month=month, year=year)
 
-class Observation:
-    """This class is used as a wrapper around the masked array data."""
+        train_df = load_dataframes(train_paths)
+        test_df = load_dataframes(test_paths)
+    else:
+        train_paths = get_all_paths(all_stations, month=month, year=year)
+        train_df = load_dataframes(train_paths)
 
-    def __init__(self, data: ma.array) -> None:
-        self.data = data
-        self.indices = np.stack(np.where(~data.mask), axis=-1)
-        self.shape = data.shape
+        if month < 10:
+            month = f"0{month}"
+        test_df = pd.read_csv(os.path.join(ref_data, f"{year}-{month}.csv"))
+        test_df["date"] = pd.to_datetime(test_df["obs_time"], utc=True)
 
-    def __len__(self) -> int:
-        return np.sum(~self.data.mask)
+    set_up_hours(train_df, test_df)
 
+    if variable == "tempAvg":
+        train_X = train_df[
+            ["t2m", "PC1", "lat", "lon", "sin_hour", "cos_hour", "hour"]
+        ].values
+        train_y = train_df["tempAvg"].values
+        test_X = test_df[
+            ["t2m", "PC1", "lat", "lon", "sin_hour", "cos_hour", "hour"]
+        ].values
+        if train_size != 1.0:
+            test_y = test_df["tempAvg"].values
 
-class SpatialDataset:
+        mean = train_X[:, 1].mean(axis=0)
+        std = train_X[:, 1].std(axis=0)
+        train_X[:, 1] = (train_X[:, 1] - mean) / std
+        test_X[:, 1] = (test_X[:, 1] - mean) / std
 
-    def __init__(
-        self,
-        n: int = 24,
-        path: str = "../data/half_km_res/temp",
-    ) -> None:
-        self.files = os.listdir(path)
-        self.files.sort()
-        self.files = self.files[:n]
-        self.path = path
+    else:
+        raise ValueError(f"Unsupported variable: {variable}. Please use 'tempAvg'.")
+    # Convert to tensors
+    train_X = torch.tensor(train_X, dtype=torch.float32)
+    train_y = torch.tensor(train_y, dtype=torch.float32)
+    test_X = torch.tensor(test_X, dtype=torch.float32)
+    if train_size != 1.0:
+        test_y = torch.tensor(test_y, dtype=torch.float32)
+    else:
+        test_y = None
 
-        self.coords = self._create_mask()
-        self.shape = self.__getitem__(0, obs_only=False).shape
-
-    def __len__(self) -> int:
-        return len(self.files)
-
-    def _create_mask(self) -> Tuple[Type[np.ndarray], Type[np.ndarray]]:
-        shape = self.__getitem__(0, obs_only=False).shape
-        mask = np.zeros(dtype=bool, shape=shape)
-        for i in range(len(self)):
-            d = self.__getitem__(i, obs_only=False)
-            mask = mask | ~np.isnan(d)
-        idx = np.where(mask)
-        indices = np.stack(idx, axis=-1)
-        return indices
-
-    def __getitem__(self, idx, obs_only=True) -> np.ndarray:
-        with rio.open(os.path.join(self.path, self.files[idx])) as src:
-            data = src.read(1)
-
-        if obs_only:
-            return data[self.coords[:, 0], self.coords[:, 1]]
-        else:
-            return data
-
-    def train_test_split(
-        self, hold_out: int = 0.4, random_seed: int = 42
-    ) -> Tuple[Type["July2023"], Type["July2023"]]:
-        """
-        This function splits the dataset into a train/test split
-        so that we can validate the model on the dataset in a reasonable way,
-        so that we do not access the same points in the training and test set.
-
-        Args:
-            hold_out (int) : The fraction of the dataset to hold out for testing.
-            random_seed (int) : The random seed to use for the split.
-        """
-        np.random.seed(random_seed)
-
-        test_idx = np.random.binomial(1, hold_out, size=len(self.coords))
-
-        train_set = deepcopy(self)
-        train_set.coords = self.coords[~(test_idx == 1)]
-
-        test_set = deepcopy(self)
-        test_set.coords = self.coords[test_idx == 1]
-
-        return train_set, test_set
+    return train_X, train_y, test_X, test_y, test_df
 
 
-class July2023:
-    def __init__(
-        self,
-        hold_out: float = 0.4,
-        n: int = 24,
-        path: str = "../data/half_km_res/temp",
-        random_seed: int = 42,
-    ) -> None:
-        """
-        This class allows us to access the first n hours of the July 2023 dataset.
-        """
-        self.files = os.listdir(path)
-        self.files.sort()
-        self.files = self.files[:n]
-        self.path = path
-        self.is_train = None
+def set_up_hours(train_df, test_df):
+    """
+    This function sets up the hour column in the train and test dataframes.
+    """
+    min_date = train_df["date"].min()
+    train_df["hour"] = train_df["date"] - min_date
+    test_df["hour"] = test_df["date"] - min_date
 
-        # self.mu = self._calc_mu()
-        # self.std = self._calc_std()
-        self.mu = []
-        self.std = []
-        self.mask, self.indices = self._create_mask()
-        # self.mu = self._calc_mu()
-        # self.std = self._calc_std()
+    train_df["hour"] = train_df["hour"].dt.total_seconds() / 3600
+    test_df["hour"] = test_df["hour"].dt.total_seconds() / 3600
 
-        self.shape = self.__getitem__(0, normalize=False).shape
+    periodize(train_df)
+    periodize(test_df)
 
-    def _create_mask(self) -> Tuple[Type[np.ndarray], Type[np.ndarray]]:
-        shape = self.__getitem__(0, normalize=False).shape
-        mask = np.zeros(dtype=bool, shape=shape)
-        for i in range(len(self)):
-            d = self.__getitem__(i, normalize=False)
-            mask = mask | ~np.isnan(d)
-        mask = ~mask.mask
-        idx = np.where(mask)
-        indices = np.stack(idx, axis=-1)
-        return mask, indices
 
-    def __len__(self) -> int:
-        return len(self.files)
+def periodize(df, period=24):
+    """
+    Create the sin and cos features for the hour column.
+    """
+    df["sin_hour"] = np.sin(2 * df["hour"] * np.pi / period)
+    df["cos_hour"] = np.cos(2 * df["hour"] * np.pi / period)
 
-    def _calc_mu(self) -> np.ndarray:
-        mu = np.zeros(len(self))
-        for i in range(len(self)):
-            d = self.__getitem__(i, normalize=False)
-            mu[i] = np.nanmean(d)
-        return mu
 
-    def _calc_std(self) -> np.ndarray:
-        std = np.zeros(len(self))
-        for i in range(len(self)):
-            d = self.__getitem__(i, normalize=False)
-            std[i] = np.nanstd(d)
-        return std
+def load_dataframes(paths):
+    """
+    Given a list of paths, just load and concatenate the dataframes.
+    """
+    dfs = []
+    for p in paths:
+        df = pd.read_parquet(p)
+        dfs.append(df)
 
-    def __getitem__(self, idx, normalize=True) -> Type[Observation]:
-        with rio.open(os.path.join(self.path, self.files[idx])) as src:
-            data = src.read(1)
+    return pd.concat(dfs, ignore_index=True)
 
-        data = ma.array(data, mask=np.isnan(data))
-        # mu = np.mean(data)
-        # sigma = np.std(data)
-        # data = (data - mu) / sigma
 
-        if self.is_train is not None:
-            mask = np.zeros(dtype=bool, shape=data.shape)
-            mask[self.indices[:, 0], self.indices[:, 1]] = True
-            mask = np.isnan(data) | ~mask
-            data = ma.array(data, mask=mask)
-
-        if normalize:
-            data = (data - self.mu[idx]) / self.std[idx]
-        return data
-
-    def train_test_split(
-        self, hold_out: int = 0.4, random_seed: int = 42
-    ) -> Tuple[Type["July2023"], Type["July2023"]]:
-        """
-        This function splits the dataset into a train/test split
-        so that we can validate the model on the dataset in a reasonable way,
-        so that we do not access the same points in the training and test set.
-
-        Args:
-            hold_out (int) : The fraction of the dataset to hold out for testing.
-            random_seed (int) : The random seed to use for the split.
-        """
-        np.random.seed(random_seed)
-
-        test_idx = np.random.binomial(1, hold_out, size=len(self.indices))
-
-        train_set = deepcopy(self)
-        train_set.indices = self.indices[~(test_idx == 1)]
-        train_set.is_train = True
-        train_set.mu = train_set._calc_mu()
-        train_set.std = train_set._calc_std()
-
-        test_set = deepcopy(self)
-        test_set.indices = self.indices[test_idx == 1]
-        test_set.is_train = False
-        test_set.mu = train_set.mu
-        test_set.std = train_set.std
-
-        return train_set, test_set
+def get_all_paths(station_path_list, month="*", year="*"):
+    """
+    This function just gets all the paths for the given month and year.
+    """
+    all_paths = []
+    for station_path in station_path_list:
+        all_paths.extend(
+            glob.glob(
+                os.path.join(station_path, f"year={year}/month={month}/*.parquet")
+            )
+        )
+    return all_paths

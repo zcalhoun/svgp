@@ -1,25 +1,37 @@
-# from .datasets import *
-from .unc import UNC_Dataset
-from .wu_mini import WeatherUnderground
+"""
+This file takes care of loading the specific dataset.
+
+"""
+
+from .datasets import load_data
 
 
-def load(dataset, file_path, **kwargs):
+def load_dataset(
+    input_path, variable=None, train_size=1.0, year=None, month=None, ref_data=None
+):
     """
-    This function provides an interface for loading the datasets.
+    Load the dataset from the specified input path.
+
+    Args:
+        input_path (str): Path to the dataset.
+        variable (str, optional): Variable of interest. Defaults to None.
+        train_size (float, optional): Proportion of data to use for training. Defaults to 1.0.
+
+    Returns:
+        tuple: Training and testing datasets.
     """
-    if dataset == "UNC":
-        return UNC_Dataset(file_path)
+    if variable is None:
+        raise ValueError("Variable must be specified.")
+    if month is None or year is None:
+        raise ValueError("Year and month must be specified.")
+    if not (0 < train_size <= 1):
+        raise ValueError("Train size must be between 0 and 1.")
 
-    if dataset == "UNC_periodic":
-        return UNC_Dataset(file_path, periodic_features=True)
-
-    if dataset == "UNC_periodic_time":
-        return UNC_Dataset(file_path, periodic_features=True, spatial_features=False)
-
-    if dataset == "UNC_periodic_covariates":
-        return UNC_Dataset(file_path, periodic_features=True, covariates=True)
-
-    if dataset == "WU_mini":
-        return WeatherUnderground(file_path, **kwargs)
-
-    raise ValueError("The dataset must be one of 'UNC'.")
+    return load_data(
+        root_dir=input_path,
+        train_size=train_size,
+        variable=variable,
+        month=month,
+        year=year,
+        ref_data=ref_data,
+    )

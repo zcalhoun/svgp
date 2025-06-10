@@ -1,395 +1,215 @@
 """
-This script contains the code to fit the VNNGP model to the dataset.
+This script contains the main training logic for each of the models.
 
-Args:
-    dataset: The dataset to fit the model to.
-    sampling_method: The method to use to split the data.
-    k: The number of neighbors to use in the nearest neighbor strategy.
-    batch_size: The batch size to use when training the model.
-    checkpoint_path: The path to save the model to.
-    output_path: The path to save the log files to.
+Given a model name and a variable of interest, this script takes care of
+loading the data, training the model, and saving the results.
+
+
+Author: Zach Calhoun
+Date: June 2025
 """
 
 import os
-import sys
-import csv
+import json
 import argparse
-import logging
 
-import gpytorch
 import torch
-from torch.utils.data import TensorDataset, DataLoader
+from torch.utils.data import DataLoader, TensorDataset
 
-import Datasets
-import models
+from Datasets import load_dataset
+from Models import load_model, load_likelihood
+from Trainers import train_model, validate_model, generate_maps
+from src.utils import SimpleLogger, init_inducing_points, set_up_loss
 
 
-def main(arguments):
+def main(args):
     """
-    The main function which loads the data, the model, and runs the train/validation
-    loop. The arguments are passed in from the command line.
+    Main function to run the training and validation process.
     """
-    # Check if the output path exists, if not create it
-    validate_output_path(arguments.output_path)
 
-    set_up_logger(arguments.log_level)
-
-    logging.info(arguments)
-    sys.stdout.flush()
-    train_X, train_y, val_X, val_y, _ = load_data(
-        arguments.dataset, arguments.file_path
+    task_id = os.getenv("SLURM_ARRAY_TASK_ID")
+    logger = SimpleLogger(task_id)
+    logger.info(args)
+    year, month = parse_task_id(task_id)
+    logger.info(f"Running task {task_id} for year {year} and month {month}")
+    train_X, train_y, test_X, test_y, test_df = load_dataset(
+        args.input,
+        variable=args.variable,
+        train_size=args.train_size,
+        year=year,
+        month=month,
+        ref_data=args.ref_data,
     )
 
-    if arguments.smoke_test:
-        # Only use a small subset of the training/validation data
-        train_X = train_X[:10000]
-        train_y = train_y[:10000]
-        val_X = val_X[:10000]
-        val_y = val_y[:10000]
-    # Check if train_X is contiguous
-    if not train_X.is_contiguous():
-        train_X = train_X.contiguous()
+    logger.info(f"Loaded test_df with {len(test_df)} rows.")
 
-    if arguments.time_multiplier is not None:
-        train_X[:, 0] *= arguments.time_multiplier
-        val_X[:, 0] *= arguments.time_multiplier
-
-    # Check the checkpoints directory to see if there is a base
-    # model with the given k and batch_size already saved.
-    # If there is, load the model and continue training.
-
-    if not os.path.exists(arguments.checkpoint_path):
-        logging.info("Creating directory %s", arguments.checkpoint_path)
-        os.makedirs(arguments.checkpoint_path)
-
-    # Create the likelihood and model
-    likelihood = gpytorch.likelihoods.GaussianLikelihood(
-        noise_constraint=gpytorch.constraints.GreaterThan(arguments.noise_constraint)
-    )
-
-    logging.info("Creating model with k=%d", arguments.k)
-    sys.stdout.flush()
-    model = models.load(
-        arguments.model,
+    inducing_points = init_inducing_points(
         train_X,
-        likelihood,
-        k=arguments.k,
-        training_batch_size=arguments.batch_size,
+        num_inducing_points=args.num_inducing_points,
     )
-    sys.stdout.flush()
-    # If cuda is available, add to CUDA
+
+    model = load_model(args.variable, inducing_points)
+    likelihood = load_likelihood(args.likelihood)
+
+    mll = set_up_loss(args.loss, likelihood, model, train_y.size(0))
+
+    train_ds = TensorDataset(train_X, train_y)
+    train_loader = DataLoader(
+        train_ds,
+        batch_size=args.batch_size,
+        shuffle=True,
+    )
+
     if torch.cuda.is_available():
-        logging.info("CUDA is available")
-        likelihood = likelihood.cuda()
         model = model.cuda()
+        likelihood = likelihood.cuda()
+
+    logger.info("Starting training...")
+    train_model(model, likelihood, mll, train_loader, args.num_epochs, args.lr)
+
+    # Save the results to a JSON file.
+    if os.path.exists(args.output) is False:
+        os.makedirs(args.output)
+
+    # Validate the model on the test set
+    if args.train_size < 1.0:
+        logger.info("Training completed. Now validating the model on the test set...")
+        test_ds = TensorDataset(test_X, test_y)
+        test_loader = DataLoader(
+            test_ds,
+            batch_size=args.batch_size,
+            shuffle=False,
+        )
+        results = validate_model(model, likelihood, test_loader)
+
+        with open(
+            os.path.join(args.output, f"results_{year}_{month}.json"),
+            "w",
+            encoding="utf-8",
+        ) as f:
+            json.dump(results, f)
     else:
-        logging.info("CUDA is not available")
-
-    optim = torch.optim.Adam(
-        [model.parameters(), likelihood.parameters()], lr=arguments.lr
-    )
-
-    scheduler = torch.optim.lr_scheduler.ConstantLR(optim, factor=0.01, total_iters=1)
-    mll = gpytorch.mlls.VariationalELBO(likelihood, model, num_data=train_y.size(0))
-    best_mse = float("inf")
-
-    # Write the model to the file using csv
-    initialize_csv(arguments.output_path)
-
-    for epoch in range(arguments.epochs):
-        logging.info("Epoch %d", epoch)
-        train_loss = train(model, likelihood, mll, optim, train_X, train_y)
-        val_loss = validate(model, likelihood, val_X, val_y, arguments.batch_size)
-
-        if val_loss < best_mse:
-            best_mse = val_loss
-            torch.save(
-                model.state_dict(), os.path.join(arguments.checkpoint_path, "model.pth")
-            )
-        logging.info(
-            "Epoch %d - Train Loss: %f - Val Loss: %f", epoch, train_loss, val_loss
+        # If the training size is 1.0, we assume that we are saving the results.
+        test_ds = TensorDataset(test_X)
+        test_loader = DataLoader(
+            test_ds,
+            batch_size=args.batch_size,
+            shuffle=False,
         )
-        # Flush the logs to the file.
-        sys.stdout.flush()
-        update_csv(
-            arguments.output_path,
-            [
-                epoch,
-                train_loss,
-                val_loss,
-                scheduler.get_last_lr()[0],
-                likelihood.noise.item(),
-            ],
-        )
-        scheduler.step()
 
-    logging.shutdown()
+        results = generate_maps(model, likelihood, test_loader)
+
+        test_df["pred"] = results["pred"]
+        test_df["lower95"] = results["lower95"]
+        test_df["upper95"] = results["upper95"]
+        test_df["lower90"] = results["lower90"]
+        test_df["upper90"] = results["upper90"]
+
+        output_file = os.path.join(args.output, f"{year}-{month}.csv")
+        test_df.to_csv(output_file, index=False)
 
 
-def initialize_csv(output_path):
+def parse_task_id(task_id):
     """
-    This function initializes the csv file to write the model to.
+    Parse the task ID to extract the year and month.
+
+    The task ID is expected to be the integer referring to the year/month
+    since 2019-01, e.g., "0: 2019-01", "1: 2019-02", etc.
+
     """
-    headers = ["epoch", "train_loss", "val_loss", "lr", "noise"]
-    with open(os.path.join(output_path, "model.csv"), "w", encoding="utf-8") as f:
-        writer = csv.writer(f)
-        writer.writerow(headers)
+    if task_id is None:
+        raise ValueError("SLURM_ARRAY_TASK_ID environment variable is not set.")
 
+    # Get list of years and months
+    years = list(range(2019, 2025))
+    months = list(range(1, 13))
+    task_id = int(task_id)
 
-def update_csv(output_path, row):
-    """
-    This function updates the csv file with the given row.
-    """
-    with open(os.path.join(output_path, "model.csv"), "a", encoding="utf-8") as f:
-        writer = csv.writer(f)
-        writer.writerow(row)
+    if task_id < 0 or task_id >= len(years) * len(months):
+        raise ValueError(f"Invalid SLURM_ARRAY_TASK_ID: {task_id}")
 
-
-def validate_output_path(output_path):
-    """
-    This function checks if the output path exists, and if not creates it.
-    """
-    if not os.path.exists(output_path):
-        logging.info("Creating directory %s", output_path)
-        os.makedirs(output_path)
-
-
-def load_data(dataset, file_path):
-    """
-    This function handles loading the dataset, and returns the
-    training and validation data.
-    """
-
-    dataset = Datasets.load(dataset, file_path)
-
-    # Split the dataset into a training and validation set
-    train_X, train_y = dataset.get_train()
-    val_X, val_y = dataset.get_val()
-
-    # Convert data to torch tensors and add to cuda if available
-    train_X = torch.from_numpy(train_X).float()
-    train_y = torch.from_numpy(train_y).float()
-    val_X = torch.from_numpy(val_X).float()
-    val_y = torch.from_numpy(val_y).float()
-
-    # Use min/max normalization for the X values.
-    x_max = train_X.max(dim=0)
-    x_min = train_X.min(dim=0)
-
-    train_X = 2 * (train_X - x_min.values) / (x_max.values - x_min.values) - 1
-    val_X = 2 * (val_X - x_min.values) / (x_max.values - x_min.values) - 1
-
-    period = 2 * dataset.period / (x_max.values[0] - x_min.values[0])
-
-    if torch.cuda.is_available():
-        train_X, train_y = train_X.cuda(), train_y.cuda()
-        val_X, val_y = val_X.cuda(), val_y.cuda()
-        train_X = train_X.contiguous()
-        val_X = val_X.contiguous()
-
-    return train_X, train_y, val_X, val_y, period
-
-
-def validate(model, likelihood, val_X, val_y, batch_size):
-    """
-    Run the validation loop and return the MSE loss.
-    """
-    val_dataset = TensorDataset(val_X.float(), val_y.float())
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
-
-    model.eval()
-    likelihood.eval()
-    means = torch.tensor([0.0])
-    val_mse = 0
-    count = 0
-    with torch.no_grad():
-        for x_batch, y_batch in val_loader:
-            preds = model(x_batch)
-            means = torch.cat([means, preds.mean.cpu()])
-
-            diff = torch.pow(preds.mean - y_batch, 2)
-            val_mse += diff.sum()
-            count += y_batch.size(0)
-
-    return val_mse.item() / count
-
-
-def train(model, likelihood, mll, optim, train_X, train_y):
-    """
-    Run the training loop over the data.
-
-    Args:
-        model: The model to train.
-        likelihood: The likelihood to use.
-        mll: The loss function to use.
-        optim: The optimizer to use.
-        train_X: The training data to use.
-        train_y: The training labels to use.
-
-    Note: there is no need for training data, as the the training points are stored
-    as inducing points in the given model.
-
-    Returns:
-        The mean squared error loss on the training data.
-    """
-    model.train()
-    likelihood.train()
-
-    num_batches = (
-        train_X.size(0) + model.variational_strategy.training_batch_size - 1
-    ) // model.variational_strategy.training_batch_size
-    logging.info("Training with %d batches", num_batches)
-
-    mse_loss = 0
-    count = 0
-    train_y = train_y.cuda() if torch.cuda.is_available() else train_y
-    for i in range(num_batches):
-        optim.zero_grad()
-        output = model(x=None)
-        current_training_indices = model.variational_strategy.current_training_indices
-        y_batch = train_y[..., current_training_indices]
-        # if torch.cuda.is_available():
-        #     y_batch = y_batch.cuda()
-        loss = -mll(output, y_batch)
-        loss.backward()
-        optim.step()
-        if i % 100 == 0:
-            logging.info("Iter %d/%d - Loss: %f", i, num_batches, loss.item())
-
-        mse_loss += (output.mean - y_batch).pow(2).sum().item()
-        count += y_batch.size(0)
-
-    return mse_loss / count
-
-
-def set_up_logger(log_level):
-    """
-    Set up the logger to log to a file.
-    """
-    logging.basicConfig(
-        level=log_level,
-        filemode="w",
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        stream=sys.stdout,
-    )
-
-    logging.captureWarnings(True)
+    year = years[task_id // len(months)]
+    month = months[task_id % len(months)]
+    return year, month
 
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser()
-
+    parser = argparse.ArgumentParser(
+        description="Train a model for a given variable of interest."
+    )
     parser.add_argument(
-        "--dataset",
+        "-i", "--input", help="The input directory containing the data", required=True
+    )
+    parser.add_argument(
+        "-o", "--output", help="The output directory to save the results", required=True
+    )
+    parser.add_argument(
+        "--variable",
+        help="The variable of interest to train the model on",
+        required=True,
         type=str,
-        default="UNC",
-        help="The dataset to fit the model to.",
+        choices=["tempAvg"],
+    )
+    parser.add_argument(
+        "--likelihood",
+        help="The likelihood to use for the model",
+        required=True,
+        type=str,
+        choices=["Gaussian", "Student"],
+        default="Student",
     )
 
     parser.add_argument(
-        "--file_path",
+        "--loss",
+        help="The loss function to use for the model",
+        required=True,
         type=str,
-        help="The path to the dataset.",
+        choices=["ELBO", "PLL"],
+        default="PLL",
     )
 
     parser.add_argument(
-        "--sampling_method",
-        type=str,
-        default="chunk_by_sensor",
-        help="The method to use to split the data.",
+        "--train_size",
+        type=float,
+        default=0.8,
+        help="The proportion of the data to use for training (default: 0.8)",
     )
 
     parser.add_argument(
-        "--model",
-        type=str,
-        default="BaseVNNGP",
-        help="The model to use.",
-    )
-
-    parser.add_argument(
-        "--k",
+        "--num_epochs",
         type=int,
-        default=256,
-        help="The number of neighbors to use in the nearest neighbor strategy.",
-    )
-
-    parser.add_argument(
-        "--target",
-        type=str,
-        default="temperature",
-        help="The target variable to predict.",
+        default=10,
+        help="The number of epochs to train the model (default: 10)",
     )
 
     parser.add_argument(
         "--batch_size",
         type=int,
-        default=256,
-        help="The batch size to use when training the model.",
+        default=512,
+        help="The batch size to use for training (default: 32)",
     )
 
     parser.add_argument(
-        "--checkpoint_path",
-        type=str,
-        default="checkpoints",
-        help="The path to save the model to.",
-    )
-
-    parser.add_argument(
-        "--output_path",
-        type=str,
-        default="output",
-        help="The path to save the log files to.",
-    )
-
-    parser.add_argument(
-        "--log_level",
-        type=str,
-        default="INFO",
-        help="The logging level to use.",
-    )
-
-    parser.add_argument(
-        "--epochs",
+        "--num_inducing_points",
         type=int,
-        default=100,
-        help="The number of epochs to train the model for.",
+        default=1000,
+        help="The number of inducing points to use for the model (default: 1000)",
     )
-
-    # Add learning rate, gamma, and other hyperparameters
     parser.add_argument(
         "--lr",
         type=float,
-        default=0.1,
-        help="The learning rate to use when training the model.",
+        default=0.01,
+        help="The learning rate to use for the model (default: 0.01)",
     )
 
     parser.add_argument(
-        "--gamma",
-        type=float,
-        default=0.9,
-        help="The gamma value to use when training the model.",
+        "--ref_data",
+        help="The path to the reference data file (default: None)",
+        type=str,
+        default=None,
     )
 
-    parser.add_argument(
-        "--noise_constraint",
-        type=float,
-        default=1e-6,
-        help="The noise constraint to use when training the model.",
-    )
+    arguments = parser.parse_args()
 
-    parser.add_argument(
-        "--smoke_test",
-        action="store_true",
-        help="Run a smoke test to make sure the code runs.",
-    )
-
-    parser.add_argument(
-        "--time_multiplier",
-        type=float,
-        help="The multiplier to use for the time variable.",
-    )
-
-    args = parser.parse_args()
-
-    main(args)
+    main(arguments)
