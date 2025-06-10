@@ -32,28 +32,34 @@ def main(args):
 
     ds_interp = ds.interp(latitude=new_lat, longitude=new_lon, method="linear")
 
-    ds_interp = (
-        ds_interp.to_dataframe()
-        .reset_index()
-        .dropna()[["valid_time", "latitude", "longitude", "t2m", "d2m", "u10", "v10"]]
-    )
-
     ds_interp["obs_time"] = pd.to_datetime(ds_interp["valid_time"], utc=True)
 
-    ds_interp["year"] = ds_interp["obs_time"].dt.year
-
-    pc_map = pd.read_csv(args.nlcd)
-
-    merged = ds_interp.merge(
-        pc_map,
-        left_on=["year", "latitude", "longitude"],
-        right_on=["year", "lat", "lon"],
+    df = (
+        ds_interp.to_dataframe()
+        .reset_index()
+        .dropna()[["obs_time", "latitude", "longitude", "t2m", "d2m", "u10", "v10"]]
     )
 
-    merged = merged.drop(columns=["lat", "lon", "obs_time"])
+    pc_map = pd.read_csv(args.nlcd)
+    pc_map = pc_map[pc_map["year"] == year]
 
-    merged["t2m"] = merged["t2m"] - 273.15  # Convert from Kelvin to Celsius
+    # Round both of the required columns.
+    pc_map["lat"] = pc_map["lat"].round(3)
+    pc_map["lon"] = pc_map["lon"].round(3)
+
+    df["longitude"] = df["longitude"].round(3)
+    df["latitude"] = df["latitude"].round(3)
+
+    merged = df.merge(
+        pc_map,
+        left_on=["latitude", "longitude"],
+        right_on=["lat", "lon"],
+    )
+
+    merged["t2m"] = merged["t2m"] - 273.15  # Convert from Kelbvin to Celsius
     merged["d2m"] = merged["d2m"] - 273.15  # Convert from Kelvin to Celsius
+
+    merged = merged[["obs_time", "lat", "lon", "t2m", "d2m", "u10", "v10", "PC1"]]
 
     output_file = os.path.join(args.output, f"{year}-{month_str}.csv")
     merged.to_csv(output_file, index=False)
