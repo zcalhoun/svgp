@@ -21,9 +21,26 @@ def main(args):
             df = pd.read_csv(os.path.join(args.ref_data, f"{year}-{month}.csv"))
             df["hdd"] = (args.threshold - df["pred"]).clip(lower=0)
             df["cdd"] = (df["pred"] - args.threshold).clip(lower=0)
-            sum_df = df.groupby(["lat", "lon"], as_index=False)[["hdd", "cdd"]].sum()
+            df["hdd_upper95"] = (args.threshold - df["upper95"]).clip(lower=0)
+            df["cdd_upper95"] = (df["upper95"] - args.threshold).clip(lower=0)
+            df["hdd_lower95"] = (args.threshold - df["lower95"]).clip(lower=0)
+            df["cdd_lower95"] = (df["lower95"] - args.threshold).clip(lower=0)
+            sum_df = df.groupby(["lat", "lon"], as_index=False)[
+                [
+                    "hdd",
+                    "cdd",
+                    "hdd_upper95",
+                    "cdd_upper95",
+                    "hdd_lower95",
+                    "cdd_lower95",
+                ]
+            ].sum()
             sum_df["hdd"] /= 24
             sum_df["cdd"] /= 24
+            sum_df["hdd_upper95"] /= 24
+            sum_df["cdd_upper95"] /= 24
+            sum_df["hdd_lower95"] /= 24
+            sum_df["cdd_lower95"] /= 24
             sum_df["year"] = year
             sum_df["month"] = month
             all_dfs.append(sum_df)
