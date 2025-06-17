@@ -4,9 +4,7 @@ of stations.
 """
 
 import os
-import glob
 import argparse
-import multiprocessing as mp
 
 import pandas as pd
 import xarray as xr
@@ -27,36 +25,37 @@ def main(args):
 
     fp = os.path.join(args.input, file)
 
-    all_data = []
+    interp_coords = xr.Dataset(
+        {
+            "latitude": (["points"], stations["lat"].values),
+            "longitude": (["points"], stations["lon"].values),
+        }
+    )
+
     with xr.open_dataset(fp, engine="cfgrib") as ds:
 
-        for i, row in stations.iterrows():
-            stationId = row["stationId"]
-            lon = row["lon"]
-            lat = row["lat"]
-            # Print the progress
-            print(
-                f"Processing station {stationId}, which is {i+1} of {len(stations)}",
-                flush=True,
-            )
-            # continue
-            ds_point = ds.interp(latitude=lat, longitude=lon, method="linear")
+        ds_interp = ds.interp(interp_coords, method="linear")
 
-            df = (
-                ds_point.to_dataframe()
-                .reset_index()
-                .dropna()[["valid_time", "t2m", "d2m", "u10", "v10"]]
-            )
-            df["stationId"] = stationId
-            all_data.append(df)
+        df = (
+            ds_interp.to_dataframe()
+            .reset_index()
+            .dropna()[
+                ["valid_time", "latitude", "longitude", "t2m", "d2m", "u10", "v10"]
+            ]
+        )
 
-    # Concatenate the results
-    all_data = pd.concat(all_data)
+    df = df.merge(
+        stations[["lat", "lon", "stationId"]],
+        left_on=["latitude", "longitude"],
+        right_on=["lat", "lon"],
+    )
+
+    df = df.drop(columns=["latitude", "longitude"])
 
     # Save to CSV
     output_file = os.path.join(args.output, f"{file[:-5]}.csv")
 
-    all_data.to_csv(output_file, index=False)
+    df.to_csv(output_file, index=False)
 
 
 def get_stations(directory):
