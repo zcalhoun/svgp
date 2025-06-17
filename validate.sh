@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name=main
-#SBATCH --array=5,13,14,15,16,19,24,27,28,31,37,39
+#SBATCH --array=0-71
 #SBATCH --mail-user=zachary.calhoun@duke.edu
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH -p scavenger-gpu
