@@ -58,6 +58,15 @@ def main(args):
         ]
     ]
 
+    # Remove duplicate stations
+    print("Removing duplicate stations.", flush=True)
+    print("Starting length: ", len(df), flush=True)
+    stations = df.groupby(["lat", "lon", "station"], as_index=False)["date"].count()
+    dup_stations = stations[stations.duplicated(subset=["lat", "lon"], keep=False)]
+    dup_stations = dup_stations["station"].values
+    df = df[~df["station"].isin(dup_stations)]
+    print("Deduped length: ", len(df), flush=True)
+
     print("Converting the temperature to Celsius.", flush=True)
     df["t2m"] = df["t2m"] - 273.15
     df["d2m"] = df["d2m"] - 273.15
