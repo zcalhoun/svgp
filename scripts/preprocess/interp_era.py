@@ -51,6 +51,7 @@ def main(args):
     )
 
     df = df.drop(columns=["latitude", "longitude"])
+    df = df[~df.duplicated()]
 
     # Save to CSV
     output_file = os.path.join(args.output, f"{file[:-5]}.csv")
