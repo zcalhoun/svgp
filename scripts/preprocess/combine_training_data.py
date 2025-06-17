@@ -105,7 +105,7 @@ def open_era_files(directory):
     for file in files:
         path = os.path.join(directory, file)
         df = pd.read_csv(path)
-        dfs.append(df)
+        dfs.append(df.drop(columns=["lat", "lon"]))
 
     df = pd.concat(dfs, ignore_index=True)
 
