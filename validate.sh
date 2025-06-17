@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name=main
-#SBATCH --array=0
+#SBATCH --array=1-71
 #SBATCH --mail-user=zachary.calhoun@duke.edu
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH -p scavenger-gpu
@@ -9,6 +9,7 @@
 #SBATCH --mem=64G
 #SBATCH --output=./logs/output_%a.txt
 #SBATCH --error=./logs/output_%a.err
+#SBATCH --time=00:10:00
 
 source gp/bin/activate
 
