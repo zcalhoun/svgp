@@ -114,6 +114,11 @@ def run_qc(train_df, test_df=None, upper_alpha=0.95, lower_alpha=0.01):
     if test_df is not None:
         test_df["tempDiff"] = test_df["tempAvg"] - test_df["t2m"]
 
+    # Need to remove data where we don't have that much data.
+    num_stations = train_df.groupby("date", as_index=False)["stationId"].count()
+    valid_dates = num_stations[num_stations["stationId"] > 20]["date"]
+    train_df = train_df[train_df["date"].isin(valid_dates)]
+
     ref_temps = pd.pivot_table(
         train_df, index="date", values="tempDiff", aggfunc=("median", qn_scale, "count")
     ).reset_index()
