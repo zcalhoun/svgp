@@ -108,6 +108,14 @@ def main(args):
         output_file = os.path.join(args.output, f"{year}-{month}.csv")
         test_df.to_csv(output_file, index=False)
 
+    torch.save(
+        model.state_dict(), os.path.join(args.output, f"model_{year}_{month}.pt")
+    )
+    torch.save(
+        likelihood.state_dict(),
+        os.path.join(args.output, f"likelihood_{year}_{month}.pt"),
+    )
+
 
 def parse_task_id(task_id):
     """

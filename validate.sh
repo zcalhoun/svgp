@@ -14,7 +14,7 @@ source gp/bin/activate
 
 python main.py \
     -i /work/zdc6/weather_underground/durham/combined/ \
-    -o /work/zdc6/temperature_all/ \
+    -o /work/zdc6/temp_stud_pll/ \
     --num_epochs 10 \
     --variable tempAvg \
     --likelihood Student \
