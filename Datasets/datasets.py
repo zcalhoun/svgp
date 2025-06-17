@@ -3,11 +3,15 @@ This script contains the main logic for loading the datasets.
 """
 
 import os
+import re
 import glob
 import random
 
 import numpy as np
 import pandas as pd
+from statsmodels.robust.scale import qn_scale
+from scipy.stats import t
+
 import torch
 
 
@@ -19,6 +23,8 @@ def load_data(
     month=None,
     year=None,
     ref_data=None,
+    upper_alpha=0.95,
+    lower_alpha=0.01,
 ):
     """
     This is the generic code for loading the data for the training/validation
@@ -39,9 +45,15 @@ def load_data(
 
         train_df = load_dataframes(train_paths)
         test_df = load_dataframes(test_paths)
+
+        train_df, test_df = run_qc(
+            train_df, test_df=test_df, upper_alpha=upper_alpha, lower_alpha=lower_alpha
+        )
     else:
         train_paths = get_all_paths(all_stations, month=month, year=year)
         train_df = load_dataframes(train_paths)
+
+        train_df = run_qc(train_df, upper_alpha=upper_alpha, lower_alpha=lower_alpha)
 
         if month < 10:
             month = f"0{month}"
@@ -80,6 +92,71 @@ def load_data(
     return train_X, train_y, test_X, test_y, test_df
 
 
+def run_qc(train_df, test_df=None, upper_alpha=0.95, lower_alpha=0.01):
+    """
+    This function runs through a few quality control steps on the dataframes.
+
+    1. We remove rows with duplicate lat/lon/date combinations.
+    2. We then run a statistical filter on the temperature data.
+    3. Lastly, we remove rows where the filter removed more than 20% of the values.
+
+    """
+
+    # Step 1: Remove duplicate lat/lon/date combinations
+    train_df = train_df[~train_df.duplicated(subset=["lat", "lon", "date"], keep=False)]
+    if test_df is not None:
+        test_df = test_df[
+            ~test_df.duplicated(subset=["lat", "lon", "date"], keep=False)
+        ]
+
+    # Steps 2 & 3: Statistical filter on the temperature data.
+    train_df["tempDiff"] = train_df["tempAvg"] - train_df["t2m"]
+    if test_df is not None:
+        test_df["tempDiff"] = test_df["tempAvg"] - test_df["t2m"]
+
+    ref_temps = pd.pivot_table(
+        train_df, index="date", values="tempDiff", aggfunc=("median", qn_scale, "count")
+    ).reset_index()
+
+    # Note: we calculate critical values based on the t-distribution,
+    # but in practice, this is very close to the normal distribution,
+    # hence we demarcate the critical value as 'z'
+    df = ref_temps["count"].mean()
+    upper_cv = t.ppf(upper_alpha, df=df)
+    lower_cv = t.ppf(lower_alpha, df=df)
+
+    train_df = train_df.merge(ref_temps, left_on="date", right_on="date")
+    train_df["z"] = (train_df["tempDiff"] - train_df["median"]) / train_df["qn_scale"]
+
+    train_df["mask"] = (train_df["z"] > upper_cv).values + (
+        train_df["z"] < lower_cv
+    ).values
+    mean_mask = train_df.groupby("stationId")["mask"].mean()
+    # We hardcode 0.2 as the threshold for removing stations.
+    # This is explicitly step 3 (which we do ahead of step 2).
+    invalid_stations = mean_mask[mean_mask > 0.2].index
+    train_df = train_df[~train_df["stationId"].isin(invalid_stations)]
+    train_df = train_df[train_df["z"] < upper_cv]
+    train_df = train_df[train_df["z"] > lower_cv]
+
+    if test_df is not None:
+        test_df = test_df.merge(ref_temps, left_on="date", right_on="date")
+        test_df["z"] = (test_df["tempDiff"] - test_df["median"]) / test_df["qn_scale"]
+        test_df["mask"] = (test_df["z"] > upper_cv).values + (
+            test_df["z"] < lower_cv
+        ).values
+        mean_mask = test_df.groupby("stationId")["mask"].mean()
+        invalid_stations = mean_mask[mean_mask > 0.2].index
+        test_df = test_df[~test_df["stationId"].isin(invalid_stations)]
+        test_df = test_df[test_df["z"] < upper_cv]
+        test_df = test_df[test_df["z"] > lower_cv]
+
+        return train_df, test_df
+
+    # If not test_df, just return the train_df
+    return train_df
+
+
 def set_up_hours(train_df, test_df):
     """
     This function sets up the hour column in the train and test dataframes.
@@ -109,7 +186,9 @@ def load_dataframes(paths):
     """
     dfs = []
     for p in paths:
+        stationId = re.search(r"station=([^/]+)", p).group(1)
         df = pd.read_parquet(p)
+        df["stationId"] = stationId
         dfs.append(df)
 
     return pd.concat(dfs, ignore_index=True)
