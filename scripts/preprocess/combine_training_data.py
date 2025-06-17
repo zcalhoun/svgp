@@ -86,10 +86,12 @@ def preprocess_wu_data(wu):
     """
     This function preprocesses the weather underground data.
     """
-    wu = wu[wu["qcStatus"] == 1]
+    wu = wu[wu["qcStatus"] != -1]
     wu = wu[~wu["tempAvg"].isna()]
     # wu = wu[~wu["dewptAvg"].isna()]
-    wu["date"] = pd.to_datetime(wu["obsTimeUtc"], utc=True).dt.round("H")
+    wu["date"] = pd.to_datetime(wu["obsTimeUtc"], utc=True).dt.round("h")
+    wu["minute"] = pd.to_datetime(wu["obsTimeUtc"], utc=True).dt.minute
+    wu = wu[wu["minute"] > 50]
 
     return wu
 
