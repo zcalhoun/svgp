@@ -9,7 +9,7 @@
 #SBATCH --mem=64G
 #SBATCH --output=./logs_g_pll_500/output_%a.txt
 #SBATCH --error=./logs_g_pll_500/output_%a.err
-#SBATCH --time=00:20:00
+#SBATCH --time=00:10:00
 
 source gp/bin/activate
 
