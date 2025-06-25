@@ -14,6 +14,8 @@ from scipy.stats import t
 
 import torch
 
+REF_VARS = {"tempAvg": "t2m", "dewptAvg": "d2m"}
+
 
 def load_data(
     root_dir,
@@ -47,8 +49,14 @@ def load_data(
         test_df = load_dataframes(test_paths)
 
         train_df, test_df = run_qc(
-            train_df, test_df=test_df, upper_alpha=upper_alpha, lower_alpha=lower_alpha
+            train_df,
+            test_df=test_df,
+            upper_alpha=upper_alpha,
+            lower_alpha=lower_alpha,
+            ref_var=REF_VARS[variable],
+            wu_var=variable,
         )
+
     else:
         train_paths = get_all_paths(all_stations, month=month, year=year)
         train_df = load_dataframes(train_paths)
@@ -62,24 +70,21 @@ def load_data(
 
     set_up_hours(train_df, test_df)
 
-    if variable == "tempAvg":
-        train_X = train_df[
-            ["t2m", "PC1", "lat", "lon", "sin_hour", "cos_hour", "hour"]
-        ].values
-        train_y = train_df["tempAvg"].values
-        test_X = test_df[
-            ["t2m", "PC1", "lat", "lon", "sin_hour", "cos_hour", "hour"]
-        ].values
-        if train_size != 1.0:
-            test_y = test_df["tempAvg"].values
+    train_X = train_df[
+        [REF_VARS[variable], "PC1", "lat", "lon", "sin_hour", "cos_hour", "hour"]
+    ].values
+    train_y = train_df[variable].values
+    test_X = test_df[
+        [REF_VARS[variable], "PC1", "lat", "lon", "sin_hour", "cos_hour", "hour"]
+    ].values
+    if train_size != 1.0:
+        test_y = test_df[variable].values
 
-        mean = train_X[:, 1].mean(axis=0)
-        std = train_X[:, 1].std(axis=0)
-        train_X[:, 1] = (train_X[:, 1] - mean) / std
-        test_X[:, 1] = (test_X[:, 1] - mean) / std
+    mean = train_X[:, 1].mean(axis=0)
+    std = train_X[:, 1].std(axis=0)
+    train_X[:, 1] = (train_X[:, 1] - mean) / std
+    test_X[:, 1] = (test_X[:, 1] - mean) / std
 
-    else:
-        raise ValueError(f"Unsupported variable: {variable}. Please use 'tempAvg'.")
     # Convert to tensors
     train_X = torch.tensor(train_X, dtype=torch.float32)
     train_y = torch.tensor(train_y, dtype=torch.float32)
@@ -92,7 +97,14 @@ def load_data(
     return train_X, train_y, test_X, test_y, test_df
 
 
-def run_qc(train_df, test_df=None, upper_alpha=0.95, lower_alpha=0.01):
+def run_qc(
+    train_df,
+    test_df=None,
+    upper_alpha=0.95,
+    lower_alpha=0.01,
+    ref_var="t2m",
+    wu_var="tempAvg",
+):
     """
     This function runs through a few quality control steps on the dataframes.
 
@@ -109,10 +121,16 @@ def run_qc(train_df, test_df=None, upper_alpha=0.95, lower_alpha=0.01):
             ~test_df.duplicated(subset=["lat", "lon", "date"], keep=False)
         ]
 
+    # Extra step for dewpoint...remove values that don't make sense.
+    # Dew point should never be more than the temperature
+    if wu_var == "dewptAvg":
+        train_df = train_df[train_df["dewptAvg"] < train_df["tempAvg"]]
+        test_df = test_df[test_df["dewptAvg"] < test_df["tempAvg"]]
+
     # Steps 2 & 3: Statistical filter on the temperature data.
-    train_df["tempDiff"] = train_df["tempAvg"] - train_df["t2m"]
+    train_df["tempDiff"] = train_df[wu_var] - train_df[ref_var]
     if test_df is not None:
-        test_df["tempDiff"] = test_df["tempAvg"] - test_df["t2m"]
+        test_df["tempDiff"] = test_df[wu_var] - test_df[ref_var]
 
     # Need to remove data where we don't have that much data.
     num_stations = train_df.groupby("date", as_index=False)["stationId"].count()

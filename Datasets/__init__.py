@@ -7,7 +7,14 @@ from .datasets import load_data
 
 
 def load_dataset(
-    input_path, variable=None, train_size=1.0, year=None, month=None, ref_data=None
+    input_path,
+    variable=None,
+    train_size=1.0,
+    year=None,
+    month=None,
+    ref_data=None,
+    lower_alpha=0.01,
+    upper_alpha=0.95,
 ):
     """
     Load the dataset from the specified input path.
@@ -34,4 +41,6 @@ def load_dataset(
         month=month,
         year=year,
         ref_data=ref_data,
+        lower_alpha=lower_alpha,
+        upper_alpha=upper_alpha,
     )

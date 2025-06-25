@@ -39,6 +39,8 @@ def main(args):
         year=year,
         month=month,
         ref_data=args.ref_data,
+        lower_alpha=args.lower_alpha,
+        upper_alpha=args.upper_alpha,
     )
 
     logger.info(f"Loaded test_df with {len(test_df)} rows.")
@@ -157,7 +159,7 @@ if __name__ == "__main__":
         help="The variable of interest to train the model on",
         required=True,
         type=str,
-        choices=["tempAvg"],
+        choices=["tempAvg", "dewptAvg"],
     )
     parser.add_argument(
         "--likelihood",
@@ -216,6 +218,20 @@ if __name__ == "__main__":
         help="The path to the reference data file (default: None)",
         type=str,
         default=None,
+    )
+
+    parser.add_argument(
+        "--lower_alpha",
+        help="The lower alpha value for filtering",
+        type=float,
+        default=0.01,
+    )
+
+    parser.add_argument(
+        "--upper_alpha",
+        help="The upper alpha value for filtering",
+        type=float,
+        default=0.95,
     )
 
     arguments = parser.parse_args()
