@@ -13,6 +13,6 @@ source ~/.bashrc
 conda activate era
 
 python create_ref_data.py \
-    --input /work/zdc6/era5/ \
-    --output /work/zdc6/era5_tabular/ \
-    --nlcd /work/zdc6/weather_underground/durham/nlcd/pca_test_354m_buffer.csv
+    --input /work-old/zdc6/era5/ \
+    --output /work-old/zdc6/era5_tabular/ \
+    --nlcd /work-old/zdc6/weather_underground/durham/nlcd/pca_test_500m_buffer.csv
