@@ -14,8 +14,8 @@
 source gp/bin/activate
 
 python main.py \
-    -i /work/zdc6/weather_underground/durham/combined/ \
-    -o /work/zdc6/dewpoint_s_pll/ \
+    -i /work-old/zdc6/weather_underground/durham/combined/ \
+    -o /work-old/zdc6/dewpoint_s_pll/ \
     --num_epochs 10 \
     --variable dewptAvg \
     --likelihood Student \
