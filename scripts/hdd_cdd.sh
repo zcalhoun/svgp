@@ -12,5 +12,5 @@ source ~/.bashrc
 conda activate era
 
 python calc_hdd_cdd.py \
-    --ref_data /work/zdc6/temp_preds/ \
-    --output /work/zdc6/weather_underground/durham/ 
+    --ref_data /work-old/zdc6/temp_preds/ \
+    --output /work-old/zdc6/weather_underground/durham/ 
