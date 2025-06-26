@@ -61,7 +61,13 @@ def load_data(
         train_paths = get_all_paths(all_stations, month=month, year=year)
         train_df = load_dataframes(train_paths)
 
-        train_df = run_qc(train_df, upper_alpha=upper_alpha, lower_alpha=lower_alpha)
+        train_df = run_qc(
+            train_df,
+            upper_alpha=upper_alpha,
+            lower_alpha=lower_alpha,
+            ref_var=REF_VARS[variable],
+            wu_var=variable,
+        )
 
         if month < 10:
             month = f"0{month}"
@@ -125,9 +131,10 @@ def run_qc(
     # Dew point should never be more than the temperature
     if wu_var == "dewptAvg":
         train_df = train_df[train_df["dewptAvg"] < train_df["tempAvg"]]
-        test_df = test_df[test_df["dewptAvg"] < test_df["tempAvg"]]
         train_df = train_df[~np.isnan(train_df["dewptAvg"])]
-        test_df = test_df[~np.isnan(test_df["dewptAvg"])]
+        if test_df is not None:
+            test_df = test_df[test_df["dewptAvg"] < test_df["tempAvg"]]
+            test_df = test_df[~np.isnan(test_df["dewptAvg"])]
 
     # Steps 2 & 3: Statistical filter on the temperature data.
     train_df["tempDiff"] = train_df[wu_var] - train_df[ref_var]
