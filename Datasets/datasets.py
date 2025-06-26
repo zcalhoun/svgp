@@ -126,6 +126,8 @@ def run_qc(
     if wu_var == "dewptAvg":
         train_df = train_df[train_df["dewptAvg"] < train_df["tempAvg"]]
         test_df = test_df[test_df["dewptAvg"] < test_df["tempAvg"]]
+        train_df = train_df[~np.isnan(train_df["dewptAvg"])]
+        test_df = test_df[~np.isnan(test_df["dewptAvg"])]
 
     # Steps 2 & 3: Statistical filter on the temperature data.
     train_df["tempDiff"] = train_df[wu_var] - train_df[ref_var]
