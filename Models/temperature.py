@@ -43,14 +43,18 @@ class TempModel(ApproximateGP):
         self.mean_module.weights.data = mean_weights
 
         # ["t2m", "PC1", "lat", "lon", "sin_hour", "cos_hour", "hour"]
+        alpha = gpytorch.kernels.ConstantKernel(
+            constant_constraint=gpytorch.constraints.Interval(0.0, 1.0),
+            active_dims=(4, 5),
+        )
+        alpha2 = gpytorch.kernels.ConstantKernel(
+            constant_constraint=gpytorch.constraints.Interval(0.0, 1.0),
+            active_dims=(4, 5),
+        )
         self.covar_module = gpytorch.kernels.ScaleKernel(
-            (
-                gpytorch.kernels.MaternKernel(nu=0.5, active_dims=(4, 5))
-                + gpytorch.kernels.ConstantKernel()
-            )
-            * gpytorch.kernels.MaternKernel(
-                nu=1.5, active_dims=1  # (1, 2, 3), ard_num_dims=3
-            )
+            # change nu=0.5 to nu=1.5 on 7/3 -- this looks better
+            (alpha * gpytorch.kernels.MaternKernel(nu=1.5, active_dims=(4, 5)) + alpha2)
+            * gpytorch.kernels.MaternKernel(nu=1.5, active_dims=1)
         ) + gpytorch.kernels.ScaleKernel(
             gpytorch.kernels.MaternKernel(nu=0.5, active_dims=(2, 3), ard_num_dims=2)
             * gpytorch.kernels.MaternKernel(nu=1.5, active_dims=6)
