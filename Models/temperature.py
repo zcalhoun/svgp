@@ -51,12 +51,19 @@ class TempModel(ApproximateGP):
             constant_constraint=gpytorch.constraints.Interval(0.0, 1.0),
             active_dims=(4, 5),
         )
+        alpha3 = gpytorch.kernels.ConstantKernel(
+            constant_constraint=gpytorch.constraints.Interval(0.0, 1.0),
+            active_dims=6,
+        )
         self.covar_module = gpytorch.kernels.ScaleKernel(
             # change nu=0.5 to nu=1.5 on 7/3 -- this looks better
             (alpha * gpytorch.kernels.MaternKernel(nu=1.5, active_dims=(4, 5)) + alpha2)
             * gpytorch.kernels.MaternKernel(nu=1.5, active_dims=1)
         ) + gpytorch.kernels.ScaleKernel(
-            gpytorch.kernels.MaternKernel(nu=0.5, active_dims=(2, 3), ard_num_dims=2)
+            (gpytorch.kernels.MaternKernel(nu=0.5, active_dims=(2, 3), ard_num_dims=2 + alpha3)
+            * gpytorch.kernels.MaternKernel(nu=1.5, active_dims=6)
+        ) + gpytorch.kernels.ScaleKernel( # Added an extra term to capture random heat effect
+            gpytorch.kernels.MaternKernel(nu=0.5, active_dims=1)
             * gpytorch.kernels.MaternKernel(nu=1.5, active_dims=6)
         )
 
