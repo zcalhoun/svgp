@@ -30,13 +30,21 @@ def generate_maps(model, likelihood, test_loader):
 
             preds = likelihood(model(X))
 
-            mean_preds.extend(preds.mean.mean(dim=0).cpu().numpy())
+            if isinstance(likelihood, gpytorch.likelihoods.GaussianLikelihood):
+                # For Gaussian likelihood, we can directly use the mean and stddev
+                mean_preds.extend(preds.mean.cpu().numpy())
+                upper95.extend((preds.mean + 1.96 * preds.stddev).cpu().numpy())
+                lower95.extend((preds.mean - 1.96 * preds.stddev).cpu().numpy())
+                upper90.extend((preds.mean + 1.645 * preds.stddev).cpu().numpy())
+                lower90.extend((preds.mean - 1.645 * preds.stddev).cpu().numpy())
+            else:
+                mean_preds.extend(preds.mean.mean(dim=0).cpu().numpy())
 
-            sample = preds.sample()
-            upper95.extend(torch.quantile(sample, 0.975, dim=0).cpu().numpy())
-            lower95.extend(torch.quantile(sample, 0.025, dim=0).cpu().numpy())
-            upper90.extend(torch.quantile(sample, 0.95, dim=0).cpu().numpy())
-            lower90.extend(torch.quantile(sample, 0.05, dim=0).cpu().numpy())
+                sample = preds.sample()
+                upper95.extend(torch.quantile(sample, 0.975, dim=0).cpu().numpy())
+                lower95.extend(torch.quantile(sample, 0.025, dim=0).cpu().numpy())
+                upper90.extend(torch.quantile(sample, 0.95, dim=0).cpu().numpy())
+                lower90.extend(torch.quantile(sample, 0.05, dim=0).cpu().numpy())
 
     return {
         "pred": np.array(mean_preds),
