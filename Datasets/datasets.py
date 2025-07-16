@@ -86,10 +86,18 @@ def load_data(
     if train_size != 1.0:
         test_y = test_df[variable].values
 
-    mean = train_X[:, 1].mean(axis=0)
-    std = train_X[:, 1].std(axis=0)
-    train_X[:, 1] = (train_X[:, 1] - mean) / std
-    test_X[:, 1] = (test_X[:, 1] - mean) / std
+    # Only normalize the PC1 variable.
+    # mean = train_X[:, 1].mean(axis=0)
+    # std = train_X[:, 1].std(axis=0)
+    # train_X[:, 1] = (train_X[:, 1] - mean) / std
+    # test_X[:, 1] = (test_X[:, 1] - mean) / std
+
+    # Normalize all of the other variables
+    mean = train_X[:, 1:].mean(dim=0)
+    std = train_X[:, 1:].std(dim=0)
+
+    train_X[:, 1:] = (train_X[:, 1:] - mean) / std
+    test_X[:, 1:] = (test_X[:, 1:] - mean) / std
 
     # Convert to tensors
     train_X = torch.tensor(train_X, dtype=torch.float32)
