@@ -59,7 +59,7 @@ class TempModel(ApproximateGP):
             gpytorch.kernels.ScaleKernel(
                 # change nu=0.5 to nu=1.5 on 7/3 -- this looks better
                 (
-                    alpha * gpytorch.kernels.MaternKernel(nu=1.5, active_dims=(4, 5))
+                    alpha * gpytorch.kernels.MaternKernel(nu=0.5, active_dims=(4, 5))
                     + alpha2
                 )
                 * gpytorch.kernels.MaternKernel(nu=1.5, active_dims=1)
