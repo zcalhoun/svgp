@@ -7,7 +7,7 @@ import torch
 import gpytorch
 from gpytorch.models import ApproximateGP
 from gpytorch.variational import (
-    MeanFieldVariationalDistribution,
+    CholeskyVariationalDistribution,
     VariationalStrategy,
 )
 
@@ -25,7 +25,7 @@ class TempModel(ApproximateGP):
         Define the VNNGP model
         """
 
-        variational_distribution = MeanFieldVariationalDistribution(
+        variational_distribution = CholeskyVariationalDistribution(
             num_inducing_points=inducing_points.size(0)
         )
 
@@ -73,19 +73,19 @@ class TempModel(ApproximateGP):
                 )
                 * gpytorch.kernels.MaternKernel(nu=1.5, active_dims=6)
             )
-            + gpytorch.kernels.ScaleKernel(  # Added an extra term to capture random heat effect
-                gpytorch.kernels.MaternKernel(nu=0.5, active_dims=1)
-                * gpytorch.kernels.MaternKernel(nu=1.5, active_dims=6)
-            )
-            + gpytorch.kernels.ScaleKernel(
-                gpytorch.kernels.RQKernel(
-                    nu=1.5,
-                    active_dims=(2, 3),
-                    ard_num_dims=2,
-                    lengthscale_prior=gpytorch.priors.SmoothedBoxPrior(0.01, 1.0),
-                )
-                * gpytorch.kernels.MaternKernel(nu=1.5, active_dims=6)
-            )
+            # + gpytorch.kernels.ScaleKernel(  # Added an extra term to capture random heat effect
+            #     gpytorch.kernels.MaternKernel(nu=0.5, active_dims=1)
+            #     * gpytorch.kernels.MaternKernel(nu=1.5, active_dims=6)
+            # )
+            # + gpytorch.kernels.ScaleKernel(
+            #     gpytorch.kernels.RQKernel(
+            #         nu=1.5,
+            #         active_dims=(2, 3),
+            #         ard_num_dims=2,
+            #         lengthscale_prior=gpytorch.priors.SmoothedBoxPrior(0.01, 1.0),
+            #     )
+            #     * gpytorch.kernels.MaternKernel(nu=1.5, active_dims=6)
+            # )
         )
 
     def forward(self, x):
