@@ -28,13 +28,14 @@ def train_model(model, likelihood, mll, train_loader, num_epochs, lr):
 
     for _ in range(num_epochs):
 
-        for x_batch, y_batch in train_loader:
+        for x_batch, y_batch, w_batch in train_loader:
             x_batch = x_batch.cuda()
             y_batch = y_batch.cuda()
+            w_batch = w_batch.cuda() if w_batch is not None else None
 
             optimizer.zero_grad()
             output = model(x_batch)
-            loss = -mll(output, y_batch)
+            loss = -mll(output, y_batch, weights=w_batch)
             loss.backward()
             optimizer.step()
             scheduler.step()

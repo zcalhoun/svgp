@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 from statsmodels.robust.scale import qn_scale
 from scipy.stats import t
+from sklearn.neighbors import KernelDensity
 
 import torch
 
@@ -87,10 +88,10 @@ def load_data(
         test_y = test_df[variable].values
 
     # Only normalize the PC1 variable.
-    mean = train_X[:, 1].mean(axis=0)
-    std = train_X[:, 1].std(axis=0)
-    train_X[:, 1] = (train_X[:, 1] - mean) / std
-    test_X[:, 1] = (test_X[:, 1] - mean) / std
+    # mean = train_X[:, 1].mean(axis=0)
+    # std = train_X[:, 1].std(axis=0)
+    # train_X[:, 1] = (train_X[:, 1] - mean) / std
+    # test_X[:, 1] = (test_X[:, 1] - mean) / std
 
     # Convert to tensors
     train_X = torch.tensor(train_X, dtype=torch.float32)
@@ -101,14 +102,35 @@ def load_data(
     else:
         test_y = None
 
+    # Create weights for the training set.
+    weights = weight_features(train_df)
+
     # Normalize all of the other variables
-    # mean = train_X[:, 1:].mean(dim=0)
-    # std = train_X[:, 1:].std(dim=0)
+    mean = train_X[:, 1:].mean(dim=0)
+    std = train_X[:, 1:].std(dim=0)
 
-    # train_X[:, 1:] = (train_X[:, 1:] - mean) / std
-    # test_X[:, 1:] = (test_X[:, 1:] - mean) / std
+    train_X[:, 1:] = (train_X[:, 1:] - mean) / std
+    test_X[:, 1:] = (test_X[:, 1:] - mean) / std
 
-    return train_X, train_y, test_X, test_y, test_df
+    return train_X, train_y, test_X, test_y, test_df, weights
+
+
+def weight_features(train_df):
+    """
+    This function creates weights for the features based on the location of the
+    station.
+    """
+
+    features = np.unique(train_df[["lon", "lat"]].values, axis=0)
+    kde = KernelDensity(kernel="exponential", bandwidth=0.01).fit(features)
+    w = kde.score_samples(train_df[["lon", "lat"]].values)
+
+    # Normalize the weights so they sum to the number of samples.
+    w = 1 / np.exp(w)
+    w = w / np.sum(w) * len(w)
+    weights = torch.from_numpy(w).float()
+
+    return weights
 
 
 def run_qc(

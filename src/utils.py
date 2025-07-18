@@ -69,6 +69,18 @@ def init_inducing_points(train_X, num_inducing_points):
     return inducing_points
 
 
+class CustomPLL(PredictiveLogLikelihood):
+    """
+    Reweights the predictive log likelihood to account for the weights.
+    """
+
+    def _log_likelihood_term(self, approximate_dist_f, target, weights=None, **kwargs):
+        if weights is not None:
+            return self.likelihood.log_marginal(target, approximate_dist_f) @ weights
+        else:
+            return self.likelihood.log_marginal(target, approximate_dist_f, **kwargs)
+
+
 def set_up_loss(loss_function, likelihood, model, size):
     """
     Set up the loss function for the model
@@ -78,6 +90,8 @@ def set_up_loss(loss_function, likelihood, model, size):
         mll = VariationalELBO(likelihood, model, num_data=size)
     elif loss_function == "PLL":
         mll = PredictiveLogLikelihood(likelihood, model, num_data=size)
+    elif loss_function == "W-PLL":
+        mll = CustomPLL(likelihood, model, num_data=size)
     else:
         raise ValueError(f"Unknown loss function: {loss_function}")
 
