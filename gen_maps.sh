@@ -14,10 +14,10 @@ source gp/bin/activate
 
 python main.py \
     -i /work-old/zdc6/weather_underground/durham/combined/ \
-    -o /work-old/zdc6/temp_preds_s_w/ \
+    -o /work-old/zdc6/temp_preds_g_w/ \
     --num_epochs 10 \
     --variable tempAvg \
-    --likelihood Student \
+    --likelihood Gaussian \
     --loss W-PLL \
     --train_size 1.0 \
     --num_inducing_points 1000 \
