@@ -67,7 +67,7 @@ class TempModel(ApproximateGP):
             + gpytorch.kernels.ScaleKernel(
                 (
                     gpytorch.kernels.MaternKernel(
-                        nu=0.5, active_dims=(2, 3), ard_num_dims=2
+                        nu=0.5, active_dims=(2, 3)  # , ard_num_dims=2
                     )
                     + alpha3
                 )
