@@ -88,10 +88,10 @@ def load_data(
         test_y = test_df[variable].values
 
     # Only normalize the PC1 variable.
-    # mean = train_X[:, 1].mean(axis=0)
-    # std = train_X[:, 1].std(axis=0)
-    # train_X[:, 1] = (train_X[:, 1] - mean) / std
-    # test_X[:, 1] = (test_X[:, 1] - mean) / std
+    mean = train_X[:, 1].mean(axis=0)
+    std = train_X[:, 1].std(axis=0)
+    train_X[:, 1] = (train_X[:, 1] - mean) / std
+    test_X[:, 1] = (test_X[:, 1] - mean) / std
 
     # Convert to tensors
     train_X = torch.tensor(train_X, dtype=torch.float32)
@@ -106,11 +106,11 @@ def load_data(
     weights = weight_features(train_df)
 
     # Normalize all of the other variables
-    mean = train_X[:, 1:].mean(dim=0)
-    std = train_X[:, 1:].std(dim=0)
+    # mean = train_X[:, 1:].mean(dim=0)
+    # std = train_X[:, 1:].std(dim=0)
 
-    train_X[:, 1:] = (train_X[:, 1:] - mean) / std
-    test_X[:, 1:] = (test_X[:, 1:] - mean) / std
+    # train_X[:, 1:] = (train_X[:, 1:] - mean) / std
+    # test_X[:, 1:] = (test_X[:, 1:] - mean) / std
 
     return train_X, train_y, test_X, test_y, test_df, weights
 
