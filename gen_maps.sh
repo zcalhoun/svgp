@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name=main
-#SBATCH --array=0-71
+#SBATCH --array=67
 #SBATCH --mail-user=zachary.calhoun@duke.edu
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH -p scavenger-gpu
@@ -14,11 +14,11 @@ source gp/bin/activate
 
 python main.py \
     -i /work-old/zdc6/weather_underground/durham/combined/ \
-    -o /work-old/zdc6/temp_preds_s2000/ \
+    -o /work-old/zdc6/temp_preds_s_w/ \
     --num_epochs 10 \
     --variable tempAvg \
     --likelihood Student \
-    --loss PLL \
+    --loss W-PLL \
     --train_size 1.0 \
-    --num_inducing_points 2000 \
+    --num_inducing_points 1000 \
     --ref_data /work-old/zdc6/era5_tabular/
