@@ -29,6 +29,7 @@ def load_data(
     ref_data=None,
     upper_alpha=0.95,
     lower_alpha=0.01,
+    calc_weights=True,
 ):
     """
     This is the generic code for loading the data for the training/validation
@@ -104,14 +105,18 @@ def load_data(
         test_y = None
 
     # Create weights for the training set.
-    train_coords = np.unique(train_df[["lat", "lon"]].values, axis=0)
-    test_coords = np.unique(test_df[["lat", "lon"]].values, axis=0)
-    train_coords = torch.from_numpy(train_coords).float()
-    test_coords = torch.from_numpy(test_coords).float()
-    train_w, test_w = lgcp_weight(train_coords, test_coords)
+    if calc_weights:
+        train_coords = np.unique(train_df[["lat", "lon"]].values, axis=0)
+        test_coords = np.unique(test_df[["lat", "lon"]].values, axis=0)
+        train_coords = torch.from_numpy(train_coords).float()
+        test_coords = torch.from_numpy(test_coords).float()
+        train_w, test_w = lgcp_weight(train_coords, test_coords)
 
-    train_w = match_weights(train_coords, train_w, train_X[:, [2, 3]])
-    test_w = match_weights(test_coords, test_w, test_X[:, [2, 3]])
+        train_w = match_weights(train_coords, train_w, train_X[:, [2, 3]])
+        test_w = match_weights(test_coords, test_w, test_X[:, [2, 3]])
+    else:
+        train_w = torch.ones(train_X.shape[0], dtype=torch.float32)
+        test_w = torch.ones(test_X.shape[0], dtype=torch.float32)
     # weights = weight_features(train_df)
 
     # Normalize all of the other variables

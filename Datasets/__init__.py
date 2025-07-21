@@ -15,6 +15,7 @@ def load_dataset(
     ref_data=None,
     lower_alpha=0.01,
     upper_alpha=0.95,
+    calc_weights=True,
 ):
     """
     Load the dataset from the specified input path.
@@ -43,4 +44,5 @@ def load_dataset(
         ref_data=ref_data,
         lower_alpha=lower_alpha,
         upper_alpha=upper_alpha,
+        calc_weights=calc_weights,
     )
