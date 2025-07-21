@@ -33,7 +33,7 @@ def main(args):
     year, month = parse_task_id(task_id)
     logger.info(f"Running task {task_id} for year {year} and month {month}")
 
-    train_X, train_y, test_X, test_y, test_df, weights = load_dataset(
+    train_X, train_y, test_X, test_y, test_df, train_w, test_w = load_dataset(
         args.input,
         variable=args.variable,
         train_size=args.train_size,
@@ -56,7 +56,7 @@ def main(args):
 
     mll = set_up_loss(args.loss, likelihood, model, train_y.size(0))
 
-    train_ds = TensorDataset(train_X, train_y, weights)
+    train_ds = TensorDataset(train_X, train_y, train_w)
     train_loader = DataLoader(
         train_ds,
         batch_size=args.batch_size,

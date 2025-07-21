@@ -14,6 +14,7 @@ from scipy.stats import t
 from sklearn.neighbors import KernelDensity
 
 import torch
+from .lgcp import lgcp_weight
 
 REF_VARS = {"tempAvg": "t2m", "dewptAvg": "d2m"}
 
@@ -103,7 +104,16 @@ def load_data(
         test_y = None
 
     # Create weights for the training set.
-    weights = weight_features(train_df)
+    train_coords = np.unique(train_df[["lat", "lon"]].values, axis=0)
+    test_coords = np.unique(test_df[["lat", "lon"]].values, axis=0)
+    train_coords = torch.from_numpy(train_coords, dtype=torch.float32)
+    test_coords = torch.from_numpy(test_coords, dtype=torch.float32)
+
+    train_w, test_w = lgcp_weight(train_coords, test_coords)
+
+    train_w = match_weights(train_coords, train_w, train_X[:, [2, 3]])
+    test_w = match_weights(test_coords, test_w, test_X[:, [2, 3]])
+    # weights = weight_features(train_df)
 
     # Normalize all of the other variables
     # mean = train_X[:, 1:].mean(dim=0)
@@ -112,7 +122,23 @@ def load_data(
     # train_X[:, 1:] = (train_X[:, 1:] - mean) / std
     # test_X[:, 1:] = (test_X[:, 1:] - mean) / std
 
-    return train_X, train_y, test_X, test_y, test_df, weights
+    return train_X, train_y, test_X, test_y, test_df, train_w, test_w
+
+
+def match_weights(coords, weights, features):
+    """
+    Match the weights to the features.
+    """
+    coord_dict = {
+        tuple(coord.tolist()): val.item() for coord, val in zip(coords, weights)
+    }
+
+    # Match values
+    matched_values = torch.tensor([coord_dict[tuple(q.tolist())] for q in features])
+
+    # Convert to float32
+    matched_values = matched_values.float()
+    return matched_values
 
 
 def weight_features(train_df):
