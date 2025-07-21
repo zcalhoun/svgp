@@ -106,9 +106,8 @@ def load_data(
     # Create weights for the training set.
     train_coords = np.unique(train_df[["lat", "lon"]].values, axis=0)
     test_coords = np.unique(test_df[["lat", "lon"]].values, axis=0)
-    train_coords = torch.from_numpy(train_coords, dtype=torch.float32)
-    test_coords = torch.from_numpy(test_coords, dtype=torch.float32)
-
+    train_coords = torch.from_numpy(train_coords).float()
+    test_coords = torch.from_numpy(test_coords).float()
     train_w, test_w = lgcp_weight(train_coords, test_coords)
 
     train_w = match_weights(train_coords, train_w, train_X[:, [2, 3]])
