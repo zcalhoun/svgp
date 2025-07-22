@@ -42,6 +42,7 @@ def main(args):
         ref_data=args.ref_data,
         lower_alpha=args.lower_alpha,
         upper_alpha=args.upper_alpha,
+        normalize=args.normalize,
     )
 
     logger.info(f"Loaded test_df with {len(test_df)} rows.")
@@ -233,6 +234,12 @@ if __name__ == "__main__":
         help="The upper alpha value for filtering",
         type=float,
         default=0.95,
+    )
+
+    parser.add_argument(
+        "--normalize",
+        action="store_true",
+        help="Whether to normalize the data (default: False)",
     )
 
     arguments = parser.parse_args()
