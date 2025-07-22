@@ -38,7 +38,7 @@ class TempModel(ApproximateGP):
         super().__init__(variational_strategy)
 
         mean_weights = torch.ones(2)
-        mean_weights[1] = 1
+        mean_weights[1] = 0.1
         self.mean_module = gpytorch.means.LinearMean(2)
         self.mean_module.weights.data = mean_weights
 
