@@ -63,8 +63,11 @@ def validate_model(model, likelihood, test_loader):
     model.eval()
     likelihood.eval()
     mae = 0
+    wmae = 0
     mse = 0
+    wmse = 0
     nlpd = 0
+    wnlpd = 0
     qce50 = 0
     qce75 = 0
     qce90 = 0
@@ -72,18 +75,24 @@ def validate_model(model, likelihood, test_loader):
     count = 0
     with torch.no_grad(), gpytorch.settings.num_likelihood_samples(100):
 
-        for X, y in test_loader:
+        for X, y, w in test_loader:
             if torch.cuda.is_available():
                 X = X.cuda()
                 y = y.cuda()
+                w = w.cuda()
 
             preds = likelihood(model(X))
 
             mean_preds = preds.mean
             if mean_preds.dim() == 1:
                 mae += torch.sum(torch.abs(mean_preds - y))
+                wmae += torch.abs(mean_preds - y) @ w
+
                 mse += torch.sum((mean_preds - y) ** 2)
+                wmse += ((mean_preds - y) ** 2) @ w
+
                 nlpd += torch.sum(-preds.log_prob(y))
+                wnlpd += -preds.log_prob(y) @ w
 
                 qce50 += quantile_coverage_error(preds, y, 50.0).item() * y.shape[0]
 
@@ -94,12 +103,21 @@ def validate_model(model, likelihood, test_loader):
                 qce95 += quantile_coverage_error(preds, y, 95.0).item() * y.shape[0]
             else:
                 mae += torch.sum(torch.abs(mean_preds.mean(axis=0) - y))
+                wmae += torch.abs(mean_preds.mean(axis=0) - y) @ w
+
                 mse += torch.sum((mean_preds.mean(axis=0) - y) ** 2)
+                wmse += ((mean_preds.mean(axis=0) - y) ** 2) @ w
+
                 S, _ = mean_preds.shape
                 nlpd += torch.sum(
                     -torch.logsumexp(preds.log_prob(y), dim=0)
                     + torch.log(torch.tensor(S))
                 )
+                wnlpd += (
+                    -torch.logsumexp(preds.log_prob(y), dim=0)
+                    + torch.log(torch.tensor(S))
+                ) @ w
+
                 samples = preds.sample()
                 qce50 += t_qce_coverage(samples, y, alpha=50.0) * y.shape[0]
 
@@ -117,6 +135,10 @@ def validate_model(model, likelihood, test_loader):
     qce90 /= count
     qce95 /= count
 
+    wmae /= count
+    wmse /= count
+    wnlpd /= count
+
     return {
         "mae": mae.item(),
         "mse": mse.item(),
@@ -125,6 +147,9 @@ def validate_model(model, likelihood, test_loader):
         "qce75": qce75,
         "qce90": qce90,
         "qce95": qce95,
+        "wmae": wmae.item(),
+        "wmse": wmse.item(),
+        "wnlpd": wnlpd.item(),
     }
 
 

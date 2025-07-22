@@ -78,7 +78,7 @@ def main(args):
     # Validate the model on the test set
     if args.train_size < 1.0:
         logger.info("Training completed. Now validating the model on the test set...")
-        test_ds = TensorDataset(test_X, test_y)
+        test_ds = TensorDataset(test_X, test_y, test_w)
         test_loader = DataLoader(
             test_ds,
             batch_size=args.batch_size,
