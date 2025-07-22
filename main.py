@@ -10,6 +10,7 @@ Date: June 2025
 """
 
 import os
+import gc
 import json
 import argparse
 
@@ -74,6 +75,11 @@ def main(args):
     # Save the results to a JSON file.
     if os.path.exists(args.output) is False:
         os.makedirs(args.output)
+
+    # Clean up some of the memory
+    del train_X, train_y, train_w, train_ds, train_loader
+    gc.collect()
+    torch.cuda.empty_cache()
 
     # Validate the model on the test set
     if args.train_size < 1.0:

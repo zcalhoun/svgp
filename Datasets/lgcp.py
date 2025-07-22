@@ -7,6 +7,8 @@ https://docs.gpytorch.ai/en/v1.13/examples/07_Pyro_Integration/Cox_Process_Examp
 
 """
 
+import gc
+
 import torch
 import gpytorch
 import pyro
@@ -17,7 +19,7 @@ def lgcp_weight(
     test_coords,
     num_ip_dim=3,
     num_qp_dim=40,
-    num_iter=200,
+    num_iter=400,
     num_particles=32,
 ):
     """
@@ -54,6 +56,10 @@ def lgcp_weight(
 
     train_weights = calc_weights(mean_train)
     test_weights = calc_weights(mean_test)
+
+    del model, function_dist, intensity_samples
+    gc.collect()
+    torch.cuda.empty_cache()
 
     return train_weights, test_weights
 
