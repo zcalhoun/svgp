@@ -70,7 +70,7 @@ def validate_model(model, likelihood, test_loader):
     qce90 = 0
     qce95 = 0
     count = 0
-    with torch.no_grad(), gpytorch.settings.num_likelihood_samples(1000):
+    with torch.no_grad(), gpytorch.settings.num_likelihood_samples(100):
 
         for X, y in test_loader:
             if torch.cuda.is_available():
