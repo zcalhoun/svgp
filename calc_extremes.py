@@ -66,14 +66,14 @@ def main(args):
 
     gt95 = []
     n_samples = args.num_samples
-    with torch.no_grad(), gpytorch.settings.num_likelihood_samples(
-        n_samples
-    ):  # , gpytorch.settings.fast_pred_samples(state=True):
+    with torch.no_grad():  # , gpytorch.settings.fast_pred_samples(state=True):
         for (X,) in test_loader:
             if torch.cuda.is_available():
                 X = X.cuda()
 
-            preds = likelihood(model(X))
+            # We ditch the likelihood for now, as we are mainly interested in the
+            # posterior variance from the model, and not really the noise model.
+            preds = model(X)
             # mean.extend(preds.mean.cpu().numpy())
             # var.extend(preds.variance.cpu().numpy())
 
@@ -83,7 +83,9 @@ def main(args):
             # upper.extend(torch.quantile(sample, 0.975, dim=0).cpu().numpy())
             # lower.extend(torch.quantile(sample, 0.025, dim=0).cpu().numpy())
 
-            sample = preds.sample()  # sample_shape=torch.Size([n_samples]),)
+            sample = preds.sample(
+                torch.Size([n_samples])
+            )  # sample_shape=torch.Size([n_samples]),)
             gt95.extend((sample > 35).int().detach().cpu().numpy().T)
 
     arr = ["lat", "lon"]

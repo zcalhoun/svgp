@@ -15,5 +15,4 @@ source gp/bin/activate
 python calc_extremes.py \
     --input "/work-old/zdc6/exp_12_temp_stud_pll/" \
     --year 2024 \
-    --month 8 \
-    --num_samples 10
+    --month 8 
