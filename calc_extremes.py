@@ -30,6 +30,7 @@ def main(args):
         upper_alpha=0.95,
         lower_alpha=0.01,
         calc_weights=False,
+        normalize=False,
     )
 
     model_state_dict = torch.load(
