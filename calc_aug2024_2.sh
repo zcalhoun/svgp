@@ -13,6 +13,6 @@
 source gp/bin/activate
 
 python calc_extremes.py \
-    --input "/work-old/zdc6/temp_stud_pll/" \
+    --input "/work-old/zdc6/exp_12_temp_stud_pll_normalize/" \
     --year 2024 \
     --month 8 
