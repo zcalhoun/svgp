@@ -43,49 +43,24 @@ class TempModel(ApproximateGP):
         self.mean_module.weights.data = mean_weights
 
         # ["t2m", "PC1", "lat", "lon", "sin_hour", "cos_hour", "hour"]
-        alpha = gpytorch.kernels.ConstantKernel(
-            constant_constraint=gpytorch.constraints.Interval(0.0, 1.0),
-            active_dims=(4, 5),
-        )
-        alpha2 = gpytorch.kernels.ConstantKernel(
-            constant_constraint=gpytorch.constraints.Interval(0.0, 1.0),
-            active_dims=(4, 5),
-        )
-        alpha3 = gpytorch.kernels.ConstantKernel(
-            constant_constraint=gpytorch.constraints.Interval(0.0, 1.0),
-            active_dims=6,
-        )
-        self.covar_module = (
-            gpytorch.kernels.ScaleKernel(
-                # change nu=0.5 to nu=1.5 on 7/3 -- this looks better
-                (
-                    alpha * gpytorch.kernels.MaternKernel(nu=0.5, active_dims=(4, 5))
-                    + alpha2
-                )
-                * gpytorch.kernels.MaternKernel(nu=1.5, active_dims=1)
-            )
-            + gpytorch.kernels.ScaleKernel(
-                (
-                    gpytorch.kernels.MaternKernel(
-                        nu=0.5, active_dims=(2, 3), ard_num_dims=2
-                    )
-                    + alpha3
-                )
-                * gpytorch.kernels.MaternKernel(nu=1.5, active_dims=6)
-            )
-            # + gpytorch.kernels.ScaleKernel(  # Added an extra term to capture random heat effect
-            #     gpytorch.kernels.MaternKernel(nu=1.5, active_dims=1)
-            #     * gpytorch.kernels.MaternKernel(nu=1.5, active_dims=6)
-            # )
-            # + gpytorch.kernels.ScaleKernel(
-            #     gpytorch.kernels.RQKernel(
-            #         # nu=1.5,
-            #         active_dims=(2, 3),
-            #         ard_num_dims=2,
-            #         lengthscale_prior=gpytorch.priors.SmoothedBoxPrior(0.1, 1.0),
-            #     )
-            #     * gpytorch.kernels.MaternKernel(nu=1.5, active_dims=6)
-            # )
+        # alpha = gpytorch.kernels.ConstantKernel(
+        #     constant_constraint=gpytorch.constraints.Interval(0.0, 1.0),
+        #     active_dims=(4, 5),
+        # )
+        # alpha2 = gpytorch.kernels.ConstantKernel(
+        #     constant_constraint=gpytorch.constraints.Interval(0.0, 1.0),
+        #     active_dims=(4, 5),
+        # )
+        # alpha3 = gpytorch.kernels.ConstantKernel(
+        #     constant_constraint=gpytorch.constraints.Interval(0.0, 1.0),
+        #     active_dims=6,
+        # )
+        self.covar_module = gpytorch.kernels.ScaleKernel(
+            gpytorch.kernels.MaternKernel(nu=1.5, active_dims=6)
+            * gpytorch.kernels.MaternKernel(nu=0.5, active_dims=1)
+        ) + gpytorch.kernels.ScaleKernel(
+            gpytorch.kernels.MaternKernel(nu=0.5, active_dims=(2, 3), ard_num_dims=2)
+            * gpytorch.kernels.MaternKernel(nu=1.5, active_dims=1)
         )
 
     def forward(self, x):
@@ -98,3 +73,44 @@ class TempModel(ApproximateGP):
             mean_x = self.mean_module(x[:, :, 0:2])
         covar_x = self.covar_module(x)
         return gpytorch.distributions.MultivariateNormal(mean_x, covar_x)
+
+
+# --- IGNORE ---
+
+
+# ALL FOR K1
+# K1was used as a more complex kernel, but it perhaps has
+# uncertainty than is desired sometimes. This is especially apparent
+# when we look at uncertainty at night (it seems too high with this model).
+
+
+# alpha = gpytorch.kernels.ConstantKernel(
+#     constant_constraint=gpytorch.constraints.Interval(0.0, 1.0),
+#     active_dims=(4, 5),
+# )
+# alpha2 = gpytorch.kernels.ConstantKernel(
+#     constant_constraint=gpytorch.constraints.Interval(0.0, 1.0),
+#     active_dims=(4, 5),
+# )
+# alpha3 = gpytorch.kernels.ConstantKernel(
+#     constant_constraint=gpytorch.constraints.Interval(0.0, 1.0),
+#     active_dims=6,
+# )
+#
+# K1 = gpytorch.kernels.ScaleKernel(
+#     (alpha * gpytorch.kernels.MaternKernel(nu=0.5, active_dims=(4, 5)) + alpha2)
+#     * gpytorch.kernels.MaternKernel(nu=1.5, active_dims=1)
+# ) + gpytorch.kernels.ScaleKernel(
+#     (gpytorch.kernels.MaternKernel(nu=0.5, active_dims=(2, 3), ard_num_dims=2) + alpha3)
+#     * gpytorch.kernels.MaternKernel(nu=1.5, active_dims=6)
+# )
+
+# THIS SEEMS LIKE A SIMPLER ALTERNATIVE TO JUST NOT OVERTHINK THINGS
+
+# K2 = gpytorch.kernels.ScaleKernel(
+#     gpytorch.kernels.MaternKernel(nu=1.5, active_dims=6)
+#     * gpytorch.kernels.MaternKernel(nu=0.5, active_dims=1)
+# ) + gpytorch.kernels.ScaleKernel(
+#     gpytorch.kernels.MaternKernel(nu=0.5, active_dims=(2, 3), ard_num_dims=2)
+#     * gpytorch.kernels.MaternKernel(nu=1.5, active_dims=1)
+# )
