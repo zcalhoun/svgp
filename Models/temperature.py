@@ -56,11 +56,16 @@ class TempModel(ApproximateGP):
         #     active_dims=6,
         # )
         self.covar_module = gpytorch.kernels.ScaleKernel(
-            gpytorch.kernels.MaternKernel(nu=1.5, active_dims=6)
-            * gpytorch.kernels.MaternKernel(nu=0.5, active_dims=1)
+            (
+                gpytorch.kernels.MaternKernel(nu=0.5, active_dims=(4, 5))
+                + gpytorch.kernels.ConstantKernel()
+            )
+            * gpytorch.kernels.MaternKernel(
+                nu=1.5, active_dims=(1, 2, 3), ard_num_dims=3
+            )
         ) + gpytorch.kernels.ScaleKernel(
             gpytorch.kernels.MaternKernel(nu=0.5, active_dims=(2, 3), ard_num_dims=2)
-            * gpytorch.kernels.MaternKernel(nu=1.5, active_dims=1)
+            * gpytorch.kernels.MaternKernel(nu=1.5, active_dims=6)
         )
 
     def forward(self, x):
@@ -114,3 +119,22 @@ class TempModel(ApproximateGP):
 #     gpytorch.kernels.MaternKernel(nu=0.5, active_dims=(2, 3), ard_num_dims=2)
 #     * gpytorch.kernels.MaternKernel(nu=1.5, active_dims=1)
 # )
+
+
+# This was the original kernel approach, which seemed to work pretty well.
+# for whatever reason, I tried to make my life harder!
+K3 = gpytorch.kernels.ScaleKernel(
+    (
+        gpytorch.kernels.MaternKernel(nu=0.5, active_dims=(4, 5))
+        + gpytorch.kernels.ConstantKernel()
+    )
+    * gpytorch.kernels.MaternKernel(nu=1.5, active_dims=(1, 2, 3), ard_num_dims=3)
+) + gpytorch.kernels.ScaleKernel(
+    gpytorch.kernels.MaternKernel(nu=0.5, active_dims=(2, 3), ard_num_dims=2)
+    * gpytorch.kernels.MaternKernel(nu=1.5, active_dims=6)
+)
+
+## My thinking
+# We should just combine the best pieces of both K2 and K3,
+# which will provide us with a good baseline temperature estimate,
+# and will then allow the covariance function to work it's magic.
