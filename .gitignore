@@ -1,3 +1,5 @@
+gp/
+logs/
 /data/*
 /output/*
 /notebooks/*
@@ -7,3 +9,11 @@
 */.ipynb_checkpoints
 */.vscode
 */.pytest_cache
+/archive/*
+*.log
+/experiments/*
+test/
+env/
+figures/
+cache/
+final_fig/
