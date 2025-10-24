@@ -1,3 +1,3 @@
-# UHI VNNGP
-This repository contains code to model urban heat with variational nearest neighbor gaussian processes.
+# SVGP
+This repository contains code to model urban heat with sparse variational Gaussian processes.
 
