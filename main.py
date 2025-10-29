@@ -65,9 +65,9 @@ def main(args):
         shuffle=True,
     )
 
-    if torch.cuda.is_available():
-        model = model.cuda()
-        likelihood = likelihood.cuda()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = model.to(device)
+    likelihood = likelihood.to(device)
 
     logger.info("Starting training...")
     train_model(model, likelihood, mll, train_loader, args.num_epochs, args.lr)
