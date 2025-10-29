@@ -1,12 +1,16 @@
 """
-This script contains the main training logic for each of the models.
+Orchestrates SVGP training/validation for spatiotemporal weather experiments.
 
-Given a model name and a variable of interest, this script takes care of
-loading the data, training the model, and saving the results.
+Each SLURM array task corresponds to a (year, month) pair. For the assigned
+period the script:
 
+1. Loads the Weather Underground and reference ERA data.
+2. Builds the sparse variational GP specified via CLI arguments.
+3. Trains the model, optionally evaluates on a held-out split, and saves
+   artifacts ready for downstream analysis.
 
 Author: Zach Calhoun
-Date: June 2025
+Last modified: October 2025
 """
 
 import os
@@ -16,16 +20,26 @@ import argparse
 
 import torch
 from torch.utils.data import DataLoader, TensorDataset
+from gpytorch.likelihoods import GaussianLikelihood, StudentTLikelihood
 
 from Datasets import load_dataset
-from Models import load_model, load_likelihood
 from Trainers import train_model, validate_model, generate_maps
-from src.utils import SimpleLogger, init_inducing_points, set_up_loss
+from src import (
+    SimpleLogger,
+    init_inducing_points,
+    set_up_loss,
+    TempModel,
+    DewpointModel,
+)
 
 
 def main(args):
     """
-    Main function to run the training and validation process.
+    Run the full training/evaluation workflow for a single (year, month) task.
+
+    The workflow resolves the date from SLURM, prepares the tensors required
+    by the SVGP model, trains with the chosen loss, and finally persists the
+    fitted state plus optional evaluation outputs.
     """
 
     task_id = os.getenv("SLURM_ARRAY_TASK_ID")
@@ -129,11 +143,11 @@ def main(args):
 
 def parse_task_id(task_id):
     """
-    Parse the task ID to extract the year and month.
+    Map a SLURM array task identifier to its corresponding (year, month).
 
-    The task ID is expected to be the integer referring to the year/month
-    since 2019-01, e.g., "0: 2019-01", "1: 2019-02", etc.
-
+    The mapping enumerates months sequentially starting at 2019-01 with id=0.
+    Raises:
+        ValueError: if the identifier is missing or outside the supported range.
     """
     if task_id is None:
         raise ValueError("SLURM_ARRAY_TASK_ID environment variable is not set.")
@@ -149,6 +163,31 @@ def parse_task_id(task_id):
     year = years[task_id // len(months)]
     month = months[task_id % len(months)]
     return year, month
+
+
+def load_model(variable, inducing_points):
+    """
+    Loads the model based on the variable and inducing points.
+    """
+    if variable == "tempAvg":
+        return TempModel(inducing_points)
+    elif variable == "dewptAvg":
+        return DewpointModel(inducing_points)
+    else:
+        raise ValueError(f"Unsupported variable: {variable}. Please use 'tempAvg'.")
+
+
+def load_likelihood(likelihood):
+    """
+    Set up the likelihood for the model
+    """
+    if likelihood == "Gaussian":
+        return GaussianLikelihood()
+
+    if likelihood == "Student":
+        return StudentTLikelihood()
+
+    raise ValueError(f"Unknown likelihood: {likelihood}")
 
 
 if __name__ == "__main__":
