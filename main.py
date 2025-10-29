@@ -23,13 +23,15 @@ from torch.utils.data import DataLoader, TensorDataset
 from gpytorch.likelihoods import GaussianLikelihood, StudentTLikelihood
 
 from Datasets import load_dataset
-from Trainers import train_model, validate_model, generate_maps
 from src import (
     SimpleLogger,
     init_inducing_points,
     set_up_loss,
     TempModel,
     DewpointModel,
+    train_model,
+    validate_model,
+    generate_maps,
 )
 
 
