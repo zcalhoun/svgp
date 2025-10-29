@@ -2,7 +2,6 @@ gp/
 logs/
 /data/*
 /output/*
-/notebooks/*
 */__pycache__/*
 /checkpoints/*
 .DS_Store
@@ -17,3 +16,4 @@ env/
 figures/
 cache/
 final_fig/
+results/
