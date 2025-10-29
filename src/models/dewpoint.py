@@ -12,7 +12,7 @@ from gpytorch.variational import (
 )
 
 
-class DewModel(ApproximateGP):
+class DewpointModel(ApproximateGP):
     """
     The Dewpoint model based on an SVGP. This model assumes
     the following covariates:

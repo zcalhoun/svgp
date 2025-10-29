@@ -4,7 +4,9 @@ This script takes care of loading the models and likelihoods.
 
 from gpytorch.likelihoods import GaussianLikelihood, StudentTLikelihood
 from .temperature import TempModel
-from .dewpoint import DewModel
+from .dewpoint import DewpointModel
+
+__all__ = ["TempModel", "DewpointModel"]
 
 
 def load_model(variable, inducing_points):
@@ -13,10 +15,11 @@ def load_model(variable, inducing_points):
     """
     if variable == "tempAvg":
         return TempModel(inducing_points)
-    elif variable == "dewptAvg":
-        return DewModel(inducing_points)
-    else:
-        raise ValueError(f"Unsupported variable: {variable}. Please use 'tempAvg'.")
+
+    if variable == "dewptAvg":
+        return DewpointModel(inducing_points)
+
+    raise ValueError(f"Unsupported variable: {variable}. Please use 'tempAvg'.")
 
 
 def load_likelihood(likelihood):
