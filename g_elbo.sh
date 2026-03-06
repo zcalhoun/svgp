@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name=g-elbo
-#SBATCH --array=60-71
+#SBATCH --array=67
 #SBATCH --mail-user=zachary.calhoun@duke.edu
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH -p carlsonlab-gpu

@@ -114,14 +114,26 @@ def main(args):
             batch_size=args.batch_size,
             shuffle=False,
         )
-        results = validate_model(model, likelihood, test_loader)
+        # results = validate_model(model, likelihood, test_loader)
 
-        with open(
-            os.path.join(args.output, f"results_{year}_{month}.json"),
-            "w",
-            encoding="utf-8",
-        ) as f:
-            json.dump(results, f)
+        # with open(
+        #     os.path.join(args.output, f"results_{year}_{month}.json"),
+        #     "w",
+        #     encoding="utf-8",
+        # ) as f:
+        #     json.dump(results, f)
+
+        # Save results from the test df.
+        results = generate_maps(model, likelihood, test_loader)
+
+        test_df["pred"] = results["pred"]
+        test_df["lower95"] = results["lower95"]
+        test_df["upper95"] = results["upper95"]
+        test_df["lower90"] = results["lower90"]
+        test_df["upper90"] = results["upper90"]
+
+        output_file = os.path.join(args.output, f"{year}-{month}.csv")
+        test_df.to_csv(output_file, index=False)
     else:
         # If the training size is 1.0, we assume that we are saving the results.
         test_ds = TensorDataset(test_X)
