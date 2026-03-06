@@ -15,8 +15,8 @@ source ~/.bashrc
 conda activate svgp
 
 python main.py \
-    -i /work-old/zdc6/weather_underground/durham/combined/ \
-    -o /work-old/zdc6/temp_g_elbo/ \
+    -i /work/zdc6/weather_underground/durham/combined/ \
+    -o /work/zdc6/temp_g_elbo/ \
     --num_epochs 10 \
     --variable tempAvg \
     --likelihood Gaussian \
