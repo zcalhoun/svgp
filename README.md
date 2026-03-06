@@ -25,9 +25,23 @@ This repository contains code and supporting assets for modelling urban heat wit
    > PyTorch and GPyTorch are required; install the CUDA build that matches your system.
 
 2. **Prepare data**  
-   Place Weather Underground station exports under `data/` (e.g. `station=XXXX/…`) and reference ERA5 tables under the directory you pass via `--ref_data`. The dataset loader expects monthly CSVs named `YYYY-MM.csv`.
+Probably the most time-consuming component of applying this method is the data preprocessing. You can think about these steps in three-parts:
+1. Data collection.
+    * Pull Weather Underground data.
+    * Pull NLCD data.
+    * Pull ERA5 data.
+2. Data preparation.
+    * Filter weather underground data to extract into CSV format with only the variables we care about.
+    * Apply principal component analysis to NLCD data to extract componnet.
+    * Linearly interpolate ERA5 data to Weather Underground coordinates.
+3. Data collation.
+    * Merge WU, NLKD, and ERA5 on coordinates to create complete feature set.
+
+Note -- the only quality control at this step is the Weather Underground QC procedure. The actual training script handles statistical filtering.
 
 3. **Train a model**
+This is the main script of interest from the manuscript. This script contains all of the logic needed to actually fit the model. If you just want to use GPyTorch on your data, and it's a relatively small dataset, I recommend checking out [this tutorial](https://docs.gpytorch.ai/en/stable/examples/04_Variational_and_Approximate_GPs/SVGP_Regression_CUDA.html) on the GPyTorch website.
+
    ```bash
    python main.py \
      --input data/weather_underground \
@@ -55,3 +69,6 @@ This repository contains code and supporting assets for modelling urban heat wit
 
 ## License
 Distributed under the MIT License. You may use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the software, provided the copyright notice and license text are included. The software is supplied “as is” without warranty, and the authors are not liable for damages arising from its use.
+
+## Questions?
+If some of this code is not working for you, please do file an issue!
