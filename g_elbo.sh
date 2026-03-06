@@ -1,17 +1,18 @@
 #!/bin/bash
 
 #SBATCH --job-name=g-elbo
-#SBATCH --array=0-71
+#SBATCH --array=60-71
 #SBATCH --mail-user=zachary.calhoun@duke.edu
 #SBATCH --mail-type=BEGIN,END,FAIL
-#SBATCH -p scavenger-gpu
+#SBATCH -p carlsonlab-gpu
 #SBATCH --gres=gpu:1
 #SBATCH --mem=64G
 #SBATCH --output=./logs_g_elbo/output_%a.txt
 #SBATCH --error=./logs_g_elbo/output_%a.err
 #SBATCH --time=01:30:00
 
-source gp/bin/activate
+source ~/.bashrc
+conda activate svgp
 
 python main.py \
     -i /work-old/zdc6/weather_underground/durham/combined/ \
