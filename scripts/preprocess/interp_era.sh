@@ -12,6 +12,6 @@ source ~/.bashrc
 conda activate era
 
 python interp_era.py \
-    --input /datacommons/carlsonlab/zdc6/era5/ \
+    --input /hpc/group/carlsonlab/zdc6/era5/ \
     --output /work/zdc6/weather_underground/durham/era_by_month/ \
     --station_list /work/zdc6/weather_underground/durham/stations.csv \
