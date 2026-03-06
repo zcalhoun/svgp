@@ -22,7 +22,7 @@ def generate_maps(model, likelihood, test_loader):
     lower95 = []
     upper90 = []
     lower90 = []
-    with torch.no_grad(), gpytorch.settings.num_likelihood_samples(1000):
+    with torch.no_grad(), gpytorch.settings.num_likelihood_samples(100):
 
         for X, _, _ in test_loader:
             if torch.cuda.is_available():
