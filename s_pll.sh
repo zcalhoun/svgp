@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name=s_pll_2000
-#SBATCH --array=67
+#SBATCH --array=66
 #SBATCH --mail-user=zachary.calhoun@duke.edu
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH -p carlsonlab-gpu
@@ -17,7 +17,7 @@ conda activate svgp
 python main.py \
     -i /work/zdc6/weather_underground/durham/combined/ \
     -o /work/zdc6/temp_s_pll/ \
-    --num_epochs 10 \
+    --num_epochs 40 \
     --variable tempAvg \
     --likelihood Student \
     --loss PLL \

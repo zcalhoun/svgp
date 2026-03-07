@@ -56,30 +56,17 @@ class TempModel(ApproximateGP):
             active_dims=6,
         )
         self.covar_module = gpytorch.kernels.ScaleKernel(
-            (
-                gpytorch.kernels.MaternKernel(nu=0.5, active_dims=(4, 5))
-                + gpytorch.kernels.ConstantKernel()
-            )
-            * gpytorch.kernels.MaternKernel(
-                nu=1.5, active_dims=(1, 2, 3), ard_num_dims=3
-            )
+            (alpha * gpytorch.kernels.MaternKernel(nu=0.5, active_dims=(4, 5)) + alpha2)
+            * gpytorch.kernels.MaternKernel(nu=1.5, active_dims=1)
         ) + gpytorch.kernels.ScaleKernel(
-            gpytorch.kernels.MaternKernel(nu=0.5, active_dims=(2, 3), ard_num_dims=2)
+            (
+                gpytorch.kernels.MaternKernel(
+                    nu=0.5, active_dims=(2, 3), ard_num_dims=2
+                )
+                + alpha3
+            )
             * gpytorch.kernels.MaternKernel(nu=1.5, active_dims=6)
         )
-
-        # gpytorch.kernels.ScaleKernel(
-        #     (alpha * gpytorch.kernels.MaternKernel(nu=0.5, active_dims=(4, 5)) + alpha2)
-        #     * gpytorch.kernels.MaternKernel(nu=1.5, active_dims=1)
-        # ) + gpytorch.kernels.ScaleKernel(
-        #     (
-        #         gpytorch.kernels.MaternKernel(
-        #             nu=0.5, active_dims=(2, 3), ard_num_dims=2
-        #         )
-        #         + alpha3
-        #     )
-        #     * gpytorch.kernels.MaternKernel(nu=1.5, active_dims=6)
-        # )
 
     def forward(self, x):
         """

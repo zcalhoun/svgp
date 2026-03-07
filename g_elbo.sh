@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name=g-elbo
-#SBATCH --array=67
+#SBATCH --array=66
 #SBATCH --mail-user=zachary.calhoun@duke.edu
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH -p carlsonlab-gpu
@@ -17,7 +17,7 @@ conda activate svgp
 python main.py \
     -i /work/zdc6/weather_underground/durham/combined/ \
     -o /work/zdc6/temp_g_elbo/ \
-    --num_epochs 10 \
+    --num_epochs 40 \
     --variable tempAvg \
     --likelihood Gaussian \
     --loss ELBO \
