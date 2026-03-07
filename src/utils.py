@@ -63,7 +63,7 @@ def init_inducing_points(train_X, num_inducing_points):
     # For reproducibility...
     torch.manual_seed(5)
 
-    M = 20000
+    M = len(train_X)
     inducing_points = train_X[torch.randperm(M)][:num_inducing_points]
 
     return inducing_points

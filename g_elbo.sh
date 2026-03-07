@@ -21,4 +21,4 @@ python main.py \
     --variable tempAvg \
     --likelihood Gaussian \
     --loss ELBO \
-    --num_inducing_points 2000
+    --num_inducing_points 1000

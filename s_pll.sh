@@ -21,4 +21,4 @@ python main.py \
     --variable tempAvg \
     --likelihood Student \
     --loss PLL \
-    --num_inducing_points 2000
+    --num_inducing_points 1000
